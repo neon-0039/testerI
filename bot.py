@@ -14,9 +14,8 @@ CHARACTER_SETTING = """好きに回答してください"""
 mk = Misskey(MK_DOMAIN, i=MK_TOKEN)
 genai.configure(api_key=GEMINI_API_KEY)
 
-# 修正：404エラー（v1beta未対応等）を回避するため、
-# ライブラリが内部でパスを自動補完できる形式に変更
-model = genai.GenerativeModel(model_name='gemini-1.5-flash')
+# 修正：404エラーを回避する最新のモデル指定
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 def main():
     try:
@@ -33,7 +32,6 @@ def main():
             mentions = []
         
         for note in mentions:
-            # ボットまたは自分自身の投稿は除外
             if note['user'].get('isBot') or note['user']['id'] == my_id:
                 continue
 
@@ -41,7 +39,6 @@ def main():
             if not user_input:
                 continue
                 
-            # メンション部分を削ってAIに渡す
             user_input = user_input.replace(f"@{my_username}", "").strip()
             
             reply_prompt = f"{CHARACTER_SETTING}\n相手の言葉: {user_input}\nこれに対して75文字以内で返信してください。"
@@ -60,9 +57,8 @@ def main():
     # --- 独り言の処理 ---
     print("投稿を生成中です...")
     try:
-        # 3. タイムライン取得（直近20件）
+        # 3. タイムライン取得
         tl = mk.notes_timeline(limit=20)
-        # テキストが存在するノートのみを抽出して結合
         tl_text = "\n".join([n['text'] for n in tl if n.get('text')])
         
         prompt = f"""
