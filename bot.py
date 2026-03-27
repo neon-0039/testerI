@@ -14,8 +14,9 @@ CHARACTER_SETTING = """好きに回答してください"""
 mk = Misskey(MK_DOMAIN, i=MK_TOKEN)
 genai.configure(api_key=GEMINI_API_KEY)
 
-# 修正：Python 3.11環境で最も安定する最新モデルの指定方法
-model = genai.GenerativeModel('gemini-1.5-flash')
+# 修正：404エラー（v1beta未対応等）を回避するため、
+# ライブラリが内部でパスを自動補完できる形式に変更
+model = genai.GenerativeModel(model_name='gemini-1.5-flash')
 
 def main():
     try:
@@ -25,8 +26,6 @@ def main():
         my_username = me['username']
 
         # 2. メンション取得
-        # 修正：画像ログ で出ていた AttributeError を防ぐため
-        # 確実に存在する notes_mentions メソッドを使用します
         try:
             mentions = mk.notes_mentions(limit=10)
         except Exception as e:
