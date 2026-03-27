@@ -2,23 +2,24 @@ name: Misskey Bot Cron
 
 on:
   schedule:
-    - cron: '0 * * * *' # 毎時0分に起動
-  workflow_dispatch: # 手動実行用ボタンも作る
+    - cron: '55 * * * *' # 毎時55分に起動して準備開始
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4 # 最新版に更新
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5 # 最新版に更新
         with:
           python-version: '3.11'
 
       - name: Install dependencies
         run: |
+          pip install --upgrade pip
           pip install Misskey.py google-generativeai
 
       - name: Run bot
