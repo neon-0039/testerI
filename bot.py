@@ -14,7 +14,7 @@ CHARACTER_SETTING = """好きに回答してください"""
 mk = Misskey(MK_DOMAIN, i=MK_TOKEN)
 genai.configure(api_key=GEMINI_API_KEY)
 
-# 修正：ログの404エラーを回避するため、正しいモデル名「models/gemini-1.5-flash」を指定
+# 修正：Python 3.11環境で最も安定する最新モデルの指定方法
 model = genai.GenerativeModel('models/gemini-1.5-flash')
 
 def main():
@@ -25,14 +25,16 @@ def main():
         my_username = me['username']
 
         # 2. メンション取得
-        # 修正：'notes'メソッドの属性エラーを回避するため、確実なエンドポイントを使用
+        # 修正：画像ログ で出ていた AttributeError を防ぐため
+        # 確実に存在する notes_mentions メソッドを使用します
         try:
             mentions = mk.notes_mentions(limit=10)
-        except AttributeError:
-            # メソッド名が異なる環境向けの予備
+        except Exception as e:
+            print(f"メンション取得に失敗しました（スキップします）: {e}")
             mentions = []
         
         for note in mentions:
+            # ボットまたは自分自身の投稿は除外
             if note['user'].get('isBot') or note['user']['id'] == my_id:
                 continue
 
@@ -40,12 +42,16 @@ def main():
             if not user_input:
                 continue
                 
+            # メンション部分を削ってAIに渡す
             user_input = user_input.replace(f"@{my_username}", "").strip()
             
             reply_prompt = f"{CHARACTER_SETTING}\n相手の言葉: {user_input}\nこれに対して75文字以内で返信してください。"
+            
+            # AI返信生成
             response = model.generate_content(reply_prompt)
             reply_text = response.text.strip()[:75]
             
+            # Misskeyにリプライを投稿
             mk.notes_create(text=reply_text, reply_id=note['id'])
             print(f"Replied to {note['user']['username']}")
             
@@ -55,8 +61,9 @@ def main():
     # --- 独り言の処理 ---
     print("投稿を生成中です...")
     try:
-        # 3. タイムライン取得
+        # 3. タイムライン取得（直近20件）
         tl = mk.notes_timeline(limit=20)
+        # テキストが存在するノートのみを抽出して結合
         tl_text = "\n".join([n['text'] for n in tl if n.get('text')])
         
         prompt = f"""
@@ -68,10 +75,11 @@ def main():
         - 75文字以内。相手が不快になるような内容は避けてください。
         """
         
+        # AI独り言生成
         response = model.generate_content(prompt)
         post_content = response.text.strip()[:75]
         
-        # 4. Misskeyに投稿
+        # 4. Misskeyにホーム投稿
         mk.notes_create(text=post_content)
         print(f"Posted: {post_content}")
         
