@@ -1,6 +1,7 @@
 import os
 from misskey import Misskey
 import google.generativeai as genai
+from google.generativeai.types import RequestOptions
 
 # 環境変数から設定を読み込み
 MK_DOMAIN = os.getenv("MK_DOMAIN")
@@ -14,9 +15,12 @@ CHARACTER_SETTING = """好きに回答してください"""
 mk = Misskey(MK_DOMAIN, i=MK_TOKEN)
 genai.configure(api_key=GEMINI_API_KEY)
 
-# 【重要】404回避のための記述
-# models/ を付けず、引数名 model_name を明示することで最新のAPIを強制的に見に行かせます
-model = genai.GenerativeModel(model_name='gemini-1.5-flash')
+# 【解決策】APIバージョンを明示的に 'v1' に固定して初期化します
+model = genai.GenerativeModel(
+    model_name='gemini-1.5-flash',
+    # これで強制的に安定版APIを使わせ、v1betaの404を回避します
+    request_options=RequestOptions(api_version='v1')
+)
 
 def main():
     try:
