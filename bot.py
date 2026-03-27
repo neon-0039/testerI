@@ -11,14 +11,11 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 CHARACTER_SETTING = """好きに回答してください"""
 
 # 初期化
-# ログにある 'notes' メソッドのエラーを回避するため、
-# ライブラリが提供する標準的な初期化を使用します
 mk = Misskey(MK_DOMAIN, i=MK_TOKEN)
 genai.configure(api_key=GEMINI_API_KEY)
 
-# ログにある「404 model not found」を回避するため
-# 最も安定しているモデル名を指定します
-model = genai.GenerativeModel('gemini-1.5-flash-latest')
+# ログの404エラーを解決するため、フルパスのモデル名に修正
+model = genai.GenerativeModel('models/gemini-1.5-flash')
 
 def main():
     try:
@@ -28,12 +25,9 @@ def main():
         my_username = me['username']
 
         # 2. メンション取得
-        # 'notes' や 'notes_mentions' でエラーが出る場合、
-        # 最も基本的な 'notes' メソッドでメンションフラグを立てて取得します
         try:
             mentions = mk.notes(mentions=True, limit=10)
         except:
-            # 万が一上記がダメな場合は空リストで続行
             mentions = []
         
         for note in mentions:
