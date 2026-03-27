@@ -24,41 +24,32 @@ def main():
         my_id = mk.i()['id'] # 自分のIDを最初に取得しておく
         # メンション取得
         mentions = mk.notes_mentions(limit=10)
-        
         for note in mentions:
             # ボット除外のガードを一番上に置く
             if note['user'].get('isBot') or note['user']['id'] == my_id:
                 print(f"Skipping bot or self: {note['user']['username']}")
                 continue
-            
             # ここまで来たら「人間」確定！AIに返信を考えさせる
             # ... (AI処理と投稿)
                 # 以降、AIの返信処理...            
                 # AIへの入力（メンション部分を除去）
                 user_input = note['text'].replace(f"@{mk.i()['username']}", "").strip()
-                
                 # Geminiで返信内容を生成（リプライ用のプロンプト）
                 reply_prompt = f"{CHARACTER_SETTING}\n相手の言葉: {user_input}\nこれに対して75文字以内で返信して。"
                 reply_text = model.generate_content(reply_prompt).text.strip()[:75]
-                
                 # 返信を実行（reply_id を指定するのがコツ）
                 mk.notes_create(text=reply_text, reply_id=note['id'])
                 print(f"Replied to {note['user']['username']}")
-    
         except Exception as e:
             print(f"リプライエラー: {e}")
-    
         # 1. ホームタイムラインから直近20件の投稿を取得
         tl = mk.notes_timeline(limit=20)
         tl_text = "\n".join([n['text'] for n in tl if n.get('text')])
-    
         # 2. Geminiに分析とキャラなりきり投稿を依頼
         prompt = f"""
         {CHARACTER_SETTING}
-        
         【タイムラインの内容】
         {tl_text}
-    
         【指示】
         上記のタイムラインの傾向を分析し、あなたのキャラ設定に従って「独り言」を投稿してください。
         - 75文字以内。
@@ -66,16 +57,13 @@ def main():
         - ハッシュタグや絵文字は最小限に。
         - 挨拶ではなく、今この瞬間の「それっぽい独り言」にすること。
         """
-    
         try:
             response = model.generate_content(prompt)
             post_content = response.text.strip()[:75] # 強制カット
-    
             # 3. Misskeyに投稿
             mk.notes_create(text=post_content)
             print(f"Posted: {post_content}")
         except Exception as e:
             print(f"Error: {e}")
-    
     if __name__ == "__main__":
         main()
