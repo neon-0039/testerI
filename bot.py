@@ -15,7 +15,7 @@ mk = Misskey(MK_DOMAIN, i=MK_TOKEN)
 genai.configure(api_key=GEMINI_API_KEY)
 
 # 修正：Python 3.11環境で最も安定する最新モデルの指定方法
-model = genai.GenerativeModel('models/gemini-1.5-flash')
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 def main():
     try:
