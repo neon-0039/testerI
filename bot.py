@@ -14,7 +14,7 @@ CHARACTER_SETTING = """好きに回答してください"""
 mk = Misskey(MK_DOMAIN, i=MK_TOKEN)
 genai.configure(api_key=GEMINI_API_KEY)
 
-# ログの404エラーを解決するため、フルパスのモデル名に修正
+# 修正：ログの404エラーを回避するため、正しいモデル名「models/gemini-1.5-flash」を指定
 model = genai.GenerativeModel('models/gemini-1.5-flash')
 
 def main():
@@ -25,9 +25,11 @@ def main():
         my_username = me['username']
 
         # 2. メンション取得
+        # 修正：'notes'メソッドの属性エラーを回避するため、確実なエンドポイントを使用
         try:
-            mentions = mk.notes(mentions=True, limit=10)
-        except:
+            mentions = mk.notes_mentions(limit=10)
+        except AttributeError:
+            # メソッド名が異なる環境向けの予備
             mentions = []
         
         for note in mentions:
