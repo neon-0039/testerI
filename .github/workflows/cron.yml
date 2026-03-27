@@ -2,25 +2,28 @@ name: Misskey Bot Cron
 
 on:
   schedule:
-    - cron: '55 * * * *' # 毎時55分に起動して準備開始
-  workflow_dispatch:
+    # 秒単位の指定は不可のため、毎時59分にトリガー
+    # GitHubの混雑状況により、数分遅れて実行されるのが一般的です
+    - cron: '59 * * * *'
+  workflow_dispatch: # 手動実行用ボタン
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4 # 最新版に更新
+        uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v5 # 最新版に更新
+        uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
-          pip install Misskey.py google-generativeai
+          # 404エラー対策として、ライブラリを強制的に最新版にアップグレードします
+          python -m pip install --upgrade pip
+          pip install --upgrade Misskey.py google-generativeai
 
       - name: Run bot
         env:
