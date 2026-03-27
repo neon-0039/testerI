@@ -20,6 +20,38 @@ genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
 def main():
+    # --- A. まずメンション（通知）をチェックして返信する ---
+    try:
+        # 直近10件の未読メンションを確認
+        def main():
+    my_id = mk.i()['id'] # 自分のIDを最初に取得しておく
+
+    # メンション取得
+    mentions = mk.notes_mentions(limit=10)
+    
+    for note in mentions:
+        # ボット除外のガードを一番上に置く
+        if note['user'].get('isBot') or note['user']['id'] == my_id:
+            print(f"Skipping bot or self: {note['user']['username']}")
+            continue
+        
+        # ここまで来たら「人間」確定！AIに返信を考えさせる
+        # ... (AI処理と投稿)
+            # 以降、AIの返信処理...            
+            # AIへの入力（メンション部分を除去）
+            user_input = note['text'].replace(f"@{mk.i()['username']}", "").strip()
+            
+            # Geminiで返信内容を生成（リプライ用のプロンプト）
+            reply_prompt = f"{CHARACTER_SETTING}\n相手の言葉: {user_input}\nこれに対して75文字以内で返信して。"
+            reply_text = model.generate_content(reply_prompt).text.strip()[:75]
+            
+            # 返信を実行（reply_id を指定するのがコツ）
+            mk.notes_create(text=reply_text, reply_id=note['id'])
+            print(f"Replied to {note['user']['username']}")
+
+    except Exception as e:
+        print(f"リプライエラー: {e}")
+
     # 1. ホームタイムラインから直近20件の投稿を取得
     tl = mk.notes_timeline(limit=20)
     tl_text = "\n".join([n['text'] for n in tl if n.get('text')])
