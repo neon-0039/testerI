@@ -3366,6 +3366,10 @@ def main():
 # SMART SCRIPT SPLITTER
 # =========================================================
 
+# =========================================================
+# SMART SCRIPT SPLITTER
+# =========================================================
+
 def split_script_commands(script):
 
     commands = []
@@ -3422,6 +3426,7 @@ def split_script_commands(script):
         if char == "{":
 
             brace_depth += 1
+
             current.append(char)
             continue
 
@@ -3429,9 +3434,15 @@ def split_script_commands(script):
 
             brace_depth -= 1
 
-            # 異常閉じ防止
+            # =========================================
+            # INVALID CLOSE
+            # =========================================
+
             if brace_depth < 0:
-                brace_depth = 0
+
+                raise Exception(
+                    "[S30] UNEXPECTED_BRACE_CLOSE"
+                )
 
             current.append(char)
             continue
@@ -3444,27 +3455,52 @@ def split_script_commands(script):
 
             command = "".join(current).strip()
 
-            if command:
+            # 空命令防止
+            if command != "":
+
                 commands.append(command)
 
             current = []
 
             continue
 
+        # =============================================
+        # NORMAL CHAR
+        # =============================================
+
         current.append(char)
 
-    # =============================================
-    # FINAL COMMAND
-    # =============================================
+    # =====================================================
+    # STRING NOT CLOSED
+    # =====================================================
+
+    if in_string:
+
+        raise Exception(
+            "[S31] STRING_NOT_TERMINATED"
+        )
+
+    # =====================================================
+    # BRACE NOT CLOSED
+    # =====================================================
+
+    if brace_depth != 0:
+
+        raise Exception(
+            "[S32] BRACE_NOT_TERMINATED"
+        )
+
+    # =====================================================
+    # LAST COMMAND
+    # =====================================================
 
     final_command = "".join(current).strip()
 
-    if final_command:
+    if final_command != "":
 
         commands.append(final_command)
 
     return commands
-
 # =========================================================
 # COMMAND VALIDATOR
 # =========================================================
@@ -3602,90 +3638,22 @@ def safe_execute_command(command):
 # PATCHED SCRIPT EXECUTOR
 # =========================================================
 
+# =========================================================
+# SCRIPT EXECUTOR
+# =========================================================
+
 def execute_script(script):
 
-    if script is None:
-        return
+    commands = split_commands(script)
 
-    script = str(script).strip()
-
-    if script == "":
-        return
-
-    # =============================================
-    # NORMALIZE
-    # =============================================
-
-    script = normalize_command(script)
-
-    # =============================================
-    # SPLIT COMMANDS
-    # =============================================
-
-    try:
-
-        commands = split_script_commands(script)
-
-    except Exception as e:
-
-        print(
-            script_error(
-                "SCRIPT_SPLIT_FAILED",
-                str(e),
-                "P03"
-            )
-        )
-
-        return
-
-    # =============================================
-    # EXECUTE LOOP
-    # =============================================
-
-    for index, command in enumerate(commands):
+    for command in commands:
 
         command = command.strip()
 
         if command == "":
             continue
 
-        # =============================================
-        # STRUCTURE VALIDATION
-        # =============================================
-
-        if not validate_command_structure(command):
-
-            print(
-                script_error(
-                    "INVALID_COMMAND_STRUCTURE",
-                    f"Malformed command near index {index}",
-                    "P04"
-                )
-            )
-
-            continue
-
-        # =============================================
-        # EXECUTE
-        # =============================================
-
-        try:
-
-            safe_execute_command(command)
-
-        except KeyboardInterrupt:
-            raise
-
-        except Exception as e:
-
-            print(
-                script_error(
-                    "SCRIPT_RUNTIME_ERROR",
-                    f"[COMMAND {index}] {str(e)}",
-                    "P05"
-                )
-            )
-
+        execute_command(command)
 # =========================================================
 # DEBUG MEMORY VIEWER
 # =========================================================
