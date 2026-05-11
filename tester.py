@@ -4036,14 +4036,6 @@ def engine_diagnostic():
 # ORIGINAL EXECUTOR BACKUP
 # =========================================================
 
-try:
-
-    _BASE_EXECUTE_COMMAND
-
-except NameError:
-
-    _BASE_EXECUTE_COMMAND = execute_command
-
 # =========================================================
 # SAFE EXECUTE COMMAND
 # =========================================================
