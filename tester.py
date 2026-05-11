@@ -4308,13 +4308,89 @@ def execute_command(command):
 
         return
 
+# =========================================================
+# SAFE EXECUTE COMMAND PATCH
+# =========================================================
+
+original_execute_command = execute_command
+
+def safe_execute_command(command):
+
+    ENGINE_STATE["executed_commands"] += 1
+
+    if command is None:
+
+        print(
+            script_error(
+                "NULL_COMMAND",
+                "Command does not exist.",
+                "F00"
+            )
+        )
+        return
+
+    command = str(command).strip()
+
+    if command == "":
+        return
+
+    # =============================================
+    # INVALID GLOBAL \ent
+    # =============================================
+
+    in_string = False
+
+    for i in range(len(command)):
+
+        char = command[i]
+
+        if char == '"':
+            in_string = not in_string
+
+        if (
+            not in_string and
+            command[i:i+4] == r'\ent'
+        ):
+
+            print(
+                script_error(
+                    "INVALID_ESCAPE_SEQUENCE",
+                    r"\ent must be inside strings.",
+                    "F01"
+                )
+            )
+
+            return
+
     # =============================================
     # EXECUTION
     # =============================================
 
     try:
 
-        _BASE_EXECUTE_COMMAND(command)
+        original_execute_command(command)
+
+    except RecursionError:
+
+        print(
+            script_error(
+                "STACK_OVERFLOW",
+                "Maximum recursion depth exceeded.",
+                "F02"
+            )
+        )
+
+    except Exception as e:
+
+        print(
+            script_error(
+                "ENGINE_COMMAND_FAILURE",
+                str(e),
+                "F03"
+            )
+        )
+
+execute_command = safe_execute_command
 
     # =============================================
     # CTRL+C
