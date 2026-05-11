@@ -2176,9 +2176,6 @@ def execute_command(command):
         )
     )
 
-# =========================================================
-# SCRIPT EXECUTOR
-# =========================================================
 
 # =========================================================
 # SCRIPT EXECUTOR
@@ -2188,16 +2185,32 @@ def execute_script(script):
 
     commands = []
 
-    current = ""
+    current = []
 
     brace_depth = 0
     in_string = False
 
-    i = 0
+    escape = False
 
-    while i < len(script):
+    for char in script:
 
-        char = script[i]
+        # =============================================
+        # ESCAPE
+        # =============================================
+
+        if escape:
+
+            current.append(char)
+
+            escape = False
+            continue
+
+        if char == "\\":
+
+            current.append(char)
+
+            escape = True
+            continue
 
         # =============================================
         # STRING TOGGLE
@@ -2207,50 +2220,119 @@ def execute_script(script):
 
             in_string = not in_string
 
-            current += char
-            i += 1
+            current.append(char)
+            continue
+
+        # =============================================
+        # INSIDE STRING
+        # =============================================
+
+        if in_string:
+
+            current.append(char)
             continue
 
         # =============================================
         # BRACE TRACK
         # =============================================
 
-        if not in_string:
+        if char == "{":
 
-            if char == "{":
-                brace_depth += 1
+            brace_depth += 1
 
-            elif char == "}":
-                brace_depth -= 1
+            current.append(char)
+            continue
+
+        if char == "}":
+
+            brace_depth -= 1
+
+            # =========================================
+            # INVALID CLOSE
+            # =========================================
+
+            if brace_depth < 0:
+
+                print(
+                    script_error(
+                        "UNEXPECTED_BRACE_CLOSE",
+                        "Unexpected '}' detected.",
+                        "S30"
+                    )
+                )
+
+                return
+
+            current.append(char)
+            continue
 
         # =============================================
         # COMMAND SPLIT
         # =============================================
 
         if (
-            char == ";" and
-            brace_depth == 0 and
-            not in_string
+            char == ";"
+            and brace_depth == 0
+            and not in_string
         ):
 
-            if current.strip():
-                commands.append(current.strip())
+            command = "".join(current).strip()
 
-            current = ""
+            if command != "":
 
-            i += 1
+                commands.append(command)
+
+            current = []
+
             continue
 
-        current += char
+        # =============================================
+        # NORMAL CHAR
+        # =============================================
 
-        i += 1
+        current.append(char)
+
+    # =============================================
+    # STRING NOT CLOSED
+    # =============================================
+
+    if in_string:
+
+        print(
+            script_error(
+                "STRING_NOT_TERMINATED",
+                'String literal was not closed.',
+                "S31"
+            )
+        )
+
+        return
+
+    # =============================================
+    # BRACE NOT CLOSED
+    # =============================================
+
+    if brace_depth != 0:
+
+        print(
+            script_error(
+                "BRACE_NOT_TERMINATED",
+                "Block scope was not closed.",
+                "S32"
+            )
+        )
+
+        return
 
     # =============================================
     # FINAL COMMAND
     # =============================================
 
-    if current.strip():
-        commands.append(current.strip())
+    final_command = "".join(current).strip()
+
+    if final_command != "":
+
+        commands.append(final_command)
 
     # =============================================
     # EXECUTION
@@ -2880,7 +2962,7 @@ def script_menu():
                     "S18"
                 )
             )
-            # =========================================================
+# =========================================================
 # CIPHER-X SCRIPT ENGINE
 # PART 4 / 6
 # MAIN SYSTEM STABILITY PATCH
@@ -3356,7 +3438,7 @@ def main():
                     "10"
                 )
             )
-            # =========================================================
+# =========================================================
 # CIPHER-X SCRIPT ENGINE
 # PART 5 / 6
 # ADVANCED SCRIPT PARSER PATCH
@@ -3365,12 +3447,11 @@ def main():
 # =========================================================
 # SMART SCRIPT SPLITTER
 # =========================================================
-
 # =========================================================
 # SMART SCRIPT SPLITTER
 # =========================================================
 
-def split_script_commands(script):
+def split_commands(script):
 
     commands = []
 
@@ -3390,12 +3471,14 @@ def split_script_commands(script):
         if escape:
 
             current.append(char)
+
             escape = False
             continue
 
         if char == "\\":
 
             current.append(char)
+
             escape = True
             continue
 
@@ -3420,7 +3503,7 @@ def split_script_commands(script):
             continue
 
         # =============================================
-        # BRACE DEPTH
+        # BRACE TRACK
         # =============================================
 
         if char == "{":
@@ -3440,9 +3523,15 @@ def split_script_commands(script):
 
             if brace_depth < 0:
 
-                raise Exception(
-                    "[S30] UNEXPECTED_BRACE_CLOSE"
+                print(
+                    script_error(
+                        "UNEXPECTED_BRACE_CLOSE",
+                        "Unexpected '}' detected.",
+                        "S30"
+                    )
                 )
+
+                return []
 
             current.append(char)
             continue
@@ -3451,11 +3540,14 @@ def split_script_commands(script):
         # COMMAND SPLIT
         # =============================================
 
-        if char == ";" and brace_depth == 0:
+        if (
+            char == ";"
+            and brace_depth == 0
+            and not in_string
+        ):
 
             command = "".join(current).strip()
 
-            # 空命令防止
             if command != "":
 
                 commands.append(command)
@@ -3470,29 +3562,41 @@ def split_script_commands(script):
 
         current.append(char)
 
-    # =====================================================
+    # =============================================
     # STRING NOT CLOSED
-    # =====================================================
+    # =============================================
 
     if in_string:
 
-        raise Exception(
-            "[S31] STRING_NOT_TERMINATED"
+        print(
+            script_error(
+                "STRING_NOT_TERMINATED",
+                'String literal was not closed.',
+                "S31"
+            )
         )
 
-    # =====================================================
+        return []
+
+    # =============================================
     # BRACE NOT CLOSED
-    # =====================================================
+    # =============================================
 
     if brace_depth != 0:
 
-        raise Exception(
-            "[S32] BRACE_NOT_TERMINATED"
+        print(
+            script_error(
+                "BRACE_NOT_TERMINATED",
+                "Block scope was not closed.",
+                "S32"
+            )
         )
 
-    # =====================================================
-    # LAST COMMAND
-    # =====================================================
+        return []
+
+    # =============================================
+    # FINAL COMMAND
+    # =============================================
 
     final_command = "".join(current).strip()
 
@@ -3781,7 +3885,7 @@ def debug_script_memory():
         "====================================="
         f"{C.RESET}"
     )
-    # =========================================================
+# =========================================================
 # CIPHER-X SCRIPT ENGINE
 # PART 6 / 6
 # FINAL STABILITY & RECOVERY PATCH
