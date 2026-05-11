@@ -1913,11 +1913,14 @@ def cmd_if(command):
 # =========================================================
 # WHILE SYSTEM
 # =========================================================
+# =========================================================
+# WHILE LOOP
+# =========================================================
 
 def cmd_while(command):
 
     match = re.fullmatch(
-        r'while\((.+?)\)\{(.+)\}',
+        r'while\s*\((.*?)\)\s*\{(.*)\}',
         command,
         re.DOTALL
     )
@@ -1931,55 +1934,42 @@ def cmd_while(command):
                 "S21"
             )
         )
+
         return
 
     condition = match.group(1).strip()
     body = match.group(2).strip()
 
     # =============================================
-    # EMPTY BODY
-    # =============================================
-
-    if body == "":
-
-        print(
-            script_error(
-                "EMPTY_WHILE_BODY",
-                "while() body cannot be empty.",
-                "S21A"
-            )
-        )
-        return
-
-    # =============================================
     # SAFETY LIMIT
     # =============================================
 
-    safety = 0
+    loop_count = 0
     max_loops = 10000
 
     while True:
 
-        safety += 1
+        # =========================================
+        # LOOP LIMIT
+        # =========================================
 
-        # =============================================
-        # LOOP OVERFLOW
-        # =============================================
+        loop_count += 1
 
-        if safety > max_loops:
+        if loop_count > max_loops:
 
             print(
                 script_error(
-                    "WHILE_OVERFLOW",
-                    "Loop exceeded safe limit.",
+                    "WHILE_LIMIT_EXCEEDED",
+                    "Loop exceeded safety limit.",
                     "S22"
                 )
             )
+
             return
 
-        # =============================================
-        # CONDITION EVAL
-        # =============================================
+        # =========================================
+        # CONDITION CHECK
+        # =========================================
 
         try:
 
@@ -1989,23 +1979,20 @@ def cmd_while(command):
 
             print(
                 script_error(
-                    "WHILE_EVALUATION_FAILED",
+                    "WHILE_CONDITION_FAILURE",
                     str(e),
                     "S23"
                 )
             )
+
             return
 
-        # =============================================
-        # BREAK
-        # =============================================
-
-        if not bool(result):
+        if not result:
             break
 
-        # =============================================
-        # EXECUTE
-        # =============================================
+        # =========================================
+        # EXECUTE BODY
+        # =========================================
 
         try:
 
@@ -2015,36 +2002,13 @@ def cmd_while(command):
 
             print(
                 script_error(
-                    "WHILE_RUNTIME_ERROR",
+                    "WHILE_RUNTIME_FAILURE",
                     str(e),
-                    "S23A"
+                    "S24"
                 )
             )
+
             return
-
-# =========================================================
-# SCRIPT COMMAND EXECUTOR
-# =========================================================
-
-def execute_command(command):
-
-    if command is None:
-        return
-
-    command = str(command).strip()
-
-    if command == "":
-        return
-
-    # =============================================
-    # int()
-    # =============================================
-
-    if command.startswith("int("):
-
-        cmd_int(command)
-        return
-
     # =============================================
     # inli()
     # =============================================
@@ -4063,11 +4027,6 @@ def engine_diagnostic():
         f"{C.RESET}"
     )
 
-# =========================================================
-# COMMAND EXECUTION TRACKER
-# =========================================================
-
-_ORIGINAL_EXECUTE_COMMAND = execute_command
 
 # =========================================================
 # EXECUTE COMMAND WRAPPER
@@ -4215,6 +4174,11 @@ def execute_command(command):
             )
         )
         return
+
+    # =========================================================
+    # COMMAND EXECUTION TRACKER
+    # =========================================================
+    _ORIGINAL_EXECUTE_COMMAND = execute_command
 
     # =============================================
     # EXECUTION
