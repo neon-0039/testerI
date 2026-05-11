@@ -4032,6 +4032,22 @@ def engine_diagnostic():
 # EXECUTE COMMAND WRAPPER
 # =========================================================
 
+# =========================================================
+# ORIGINAL EXECUTOR BACKUP
+# =========================================================
+
+try:
+
+    _BASE_EXECUTE_COMMAND
+
+except NameError:
+
+    _BASE_EXECUTE_COMMAND = execute_command
+
+# =========================================================
+# SAFE EXECUTE COMMAND
+# =========================================================
+
 def execute_command(command):
 
     # =============================================
@@ -4041,7 +4057,7 @@ def execute_command(command):
     ENGINE_STATE["executed_commands"] += 1
 
     # =============================================
-    # NORMALIZE
+    # NULL CHECK
     # =============================================
 
     if command is None:
@@ -4055,7 +4071,12 @@ def execute_command(command):
                 "F00"
             )
         )
+
         return
+
+    # =============================================
+    # NORMALIZE
+    # =============================================
 
     command = str(command).strip()
 
@@ -4064,98 +4085,6 @@ def execute_command(command):
     # =============================================
 
     if command == "":
-        return
-
-    # =============================================
-    # INVALID GLOBAL ESCAPE
-    # =============================================
-
-    in_string = False
-
-    for i in range(len(command)):
-
-        char = command[i]
-
-        # STRING TOGGLE
-        if char == '"':
-
-            in_string = not in_string
-
-        # GLOBAL \ent
-        if (
-            not in_string and
-            command[i:i+4] == r'\ent'
-        ):
-
-            ENGINE_STATE["runtime_errors"] += 1
-
-            print(
-                script_error(
-                    "INVALID_ESCAPE_SEQUENCE",
-                    r"\ent must be inside a string.",
-                    "F01"
-                )
-            )
-            return
-
-    # =============================================
-    # UNMATCHED QUOTES
-    # =============================================
-
-    if command.count('"') % 2 != 0:
-
-        ENGINE_STATE["runtime_errors"] += 1
-
-        print(
-            script_error(
-                "UNMATCHED_QUOTES",
-                "String literal is not closed.",
-                "F02"
-            )
-        )
-        return
-
-    # =============================================
-    # BRACKET VALIDATION
-    # =============================================
-
-    if command.count("(") != command.count(")"):
-
-        ENGINE_STATE["runtime_errors"] += 1
-
-        print(
-            script_error(
-                "UNMATCHED_PARENTHESES",
-                "Parentheses count mismatch.",
-                "F03"
-            )
-        )
-        return
-
-    if command.count("{") != command.count("}"):
-
-        ENGINE_STATE["runtime_errors"] += 1
-
-        print(
-            script_error(
-                "UNMATCHED_BRACES",
-                "Brace count mismatch.",
-                "F04"
-            )
-        )
-        return
-
-    if command.count("[") != command.count("]"):
-
-        ENGINE_STATE["runtime_errors"] += 1
-
-        print(
-            script_error(
-                "UNMATCHED_BRACKETS",
-                "Bracket count mismatch.",
-                "F05"
-            )
-        )
         return
 
     # =============================================
@@ -4170,15 +4099,214 @@ def execute_command(command):
             script_error(
                 "COMMAND_OVERFLOW",
                 "Command length exceeded safe limit.",
+                "F01"
+            )
+        )
+
+        return
+
+    # =============================================
+    # STRING STATE
+    # =============================================
+
+    in_string = False
+    escape = False
+
+    paren_depth = 0
+    brace_depth = 0
+    bracket_depth = 0
+
+    # =============================================
+    # VALIDATION LOOP
+    # =============================================
+
+    for i, char in enumerate(command):
+
+        # ESCAPE
+        if escape:
+
+            escape = False
+            continue
+
+        if char == "\\":
+
+            escape = True
+            continue
+
+        # STRING TOGGLE
+        if char == '"':
+
+            in_string = not in_string
+            continue
+
+        # INSIDE STRING
+        if in_string:
+            continue
+
+        # =========================================
+        # INVALID GLOBAL \ent
+        # =========================================
+
+        if command[i:i+4] == r'\ent':
+
+            ENGINE_STATE["runtime_errors"] += 1
+
+            print(
+                script_error(
+                    "INVALID_ESCAPE_SEQUENCE",
+                    r"\ent must exist inside strings only.",
+                    "F02"
+                )
+            )
+
+            return
+
+        # =========================================
+        # PARENTHESIS
+        # =========================================
+
+        if char == "(":
+            paren_depth += 1
+
+        elif char == ")":
+
+            paren_depth -= 1
+
+            if paren_depth < 0:
+
+                ENGINE_STATE["runtime_errors"] += 1
+
+                print(
+                    script_error(
+                        "UNEXPECTED_PARENTHESES_CLOSE",
+                        "Unexpected ')' detected.",
+                        "F03"
+                    )
+                )
+
+                return
+
+        # =========================================
+        # BRACES
+        # =========================================
+
+        elif char == "{":
+            brace_depth += 1
+
+        elif char == "}":
+
+            brace_depth -= 1
+
+            if brace_depth < 0:
+
+                ENGINE_STATE["runtime_errors"] += 1
+
+                print(
+                    script_error(
+                        "UNEXPECTED_BRACE_CLOSE",
+                        "Unexpected '}' detected.",
+                        "F04"
+                    )
+                )
+
+                return
+
+        # =========================================
+        # BRACKETS
+        # =========================================
+
+        elif char == "[":
+            bracket_depth += 1
+
+        elif char == "]":
+
+            bracket_depth -= 1
+
+            if bracket_depth < 0:
+
+                ENGINE_STATE["runtime_errors"] += 1
+
+                print(
+                    script_error(
+                        "UNEXPECTED_BRACKET_CLOSE",
+                        "Unexpected ']' detected.",
+                        "F05"
+                    )
+                )
+
+                return
+
+    # =============================================
+    # UNMATCHED QUOTES
+    # =============================================
+
+    if in_string:
+
+        ENGINE_STATE["runtime_errors"] += 1
+
+        print(
+            script_error(
+                "UNMATCHED_QUOTES",
+                "String literal is not closed.",
                 "F06"
             )
         )
+
         return
 
-    # =========================================================
-    # COMMAND EXECUTION TRACKER
-    # =========================================================
-    _ORIGINAL_EXECUTE_COMMAND = execute_command
+    # =============================================
+    # UNMATCHED ()
+    # =============================================
+
+    if paren_depth != 0:
+
+        ENGINE_STATE["runtime_errors"] += 1
+
+        print(
+            script_error(
+                "UNMATCHED_PARENTHESES",
+                "Parentheses count mismatch.",
+                "F07"
+            )
+        )
+
+        return
+
+    # =============================================
+    # UNMATCHED {}
+    # =============================================
+
+    if brace_depth != 0:
+
+        ENGINE_STATE["runtime_errors"] += 1
+
+        print(
+            script_error(
+                "UNMATCHED_BRACES",
+                "Brace count mismatch.",
+                "F08"
+            )
+        )
+
+        return
+
+    # =============================================
+    # UNMATCHED []
+    # =============================================
+
+    if bracket_depth != 0:
+
+        ENGINE_STATE["runtime_errors"] += 1
+
+        print(
+            script_error(
+                "UNMATCHED_BRACKETS",
+                "Bracket count mismatch.",
+                "F09"
+            )
+        )
+
+        return
 
     # =============================================
     # EXECUTION
@@ -4186,8 +4314,64 @@ def execute_command(command):
 
     try:
 
-        _ORIGINAL_EXECUTE_COMMAND(command)
+        _BASE_EXECUTE_COMMAND(command)
 
+    # =============================================
+    # CTRL+C
+    # =============================================
+
+    except KeyboardInterrupt:
+        raise
+
+    # =============================================
+    # RECURSION
+    # =============================================
+
+    except RecursionError:
+
+        ENGINE_STATE["runtime_errors"] += 1
+
+        print(
+            script_error(
+                "STACK_OVERFLOW",
+                "Maximum recursion depth exceeded.",
+                "F10"
+            )
+        )
+
+    # =============================================
+    # MEMORY
+    # =============================================
+
+    except MemoryError:
+
+        ENGINE_STATE["runtime_errors"] += 1
+
+        print(
+            script_error(
+                "MEMORY_OVERFLOW",
+                "Memory allocation failed.",
+                "F11"
+            )
+        )
+
+    # =============================================
+    # RUNTIME
+    # =============================================
+
+    except Exception as e:
+
+        ENGINE_STATE["runtime_errors"] += 1
+
+        ENGINE_STATE["last_error"] = str(e)
+
+        print(
+            script_error(
+                "ENGINE_COMMAND_FAILURE",
+                str(e),
+                "F12"
+            )
+        )
     # =============================================
     # CTRL+C
     # =============================================
