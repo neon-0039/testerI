@@ -2180,45 +2180,85 @@ def execute_command(command):
 # SCRIPT EXECUTOR
 # =========================================================
 
+# =========================================================
+# SCRIPT EXECUTOR
+# =========================================================
+
 def execute_script(script):
 
-    if script is None:
-        return
+    commands = []
 
-    script = str(script).strip()
+    current = ""
 
-    if script == "":
-        return
+    brace_depth = 0
+    in_string = False
 
-    # =============================================
-    # COMMAND SPLIT
-    # =============================================
+    i = 0
 
-    commands = script.split(";")
+    while i < len(script):
 
-    for index, command in enumerate(commands):
+        char = script[i]
 
-        command = command.strip()
+        # =============================================
+        # STRING TOGGLE
+        # =============================================
 
-        if command == "":
+        if char == '"':
+
+            in_string = not in_string
+
+            current += char
+            i += 1
             continue
 
-        try:
+        # =============================================
+        # BRACE TRACK
+        # =============================================
 
-            execute_command(command)
+        if not in_string:
 
-        except KeyboardInterrupt:
-            raise
+            if char == "{":
+                brace_depth += 1
 
-        except Exception as e:
+            elif char == "}":
+                brace_depth -= 1
 
-            print(
-                script_error(
-                    "SCRIPT_COMMAND_FAILURE",
-                    f"[COMMAND {index}] {str(e)}",
-                    "S16A"
-                )
-            )
+        # =============================================
+        # COMMAND SPLIT
+        # =============================================
+
+        if (
+            char == ";" and
+            brace_depth == 0 and
+            not in_string
+        ):
+
+            if current.strip():
+                commands.append(current.strip())
+
+            current = ""
+
+            i += 1
+            continue
+
+        current += char
+
+        i += 1
+
+    # =============================================
+    # FINAL COMMAND
+    # =============================================
+
+    if current.strip():
+        commands.append(current.strip())
+
+    # =============================================
+    # EXECUTION
+    # =============================================
+
+    for command in commands:
+
+        execute_command(command)
 # =========================================================
 # CIPHER-X SCRIPT ENGINE
 # PART 3 / 6
