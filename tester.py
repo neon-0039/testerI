@@ -3643,6 +3643,15 @@ def cmd_memory(command):
 # HELP MENU SYSTEM
 # =========================================================
 
+
+# =========================================================
+# HELP MENU
+# =========================================================
+
+# =========================================================
+# HELP MENU SYSTEM
+# =========================================================
+
 HELP_CATEGORIES = {
 
     "1": {
@@ -4020,19 +4029,27 @@ wait(1)
 # HELP MENU
 # =========================================================
 
-def script_help():
+# =========================================================
+# HELP MENU
+# =========================================================
 
+def script_help():
+    print("SCRIPT_HELP_START")
     while True:
 
         print()
 
         print(
-            f"{C.BRIGHT_CYAN}{C.BOLD}"
+            f"{C.BRIGHT_MAGENTA}"
             "================ HELP MENU ================"
             f"{C.RESET}"
         )
 
         print()
+
+        # =============================================
+        # CATEGORY LIST
+        # =============================================
 
         for key, value in HELP_CATEGORIES.items():
 
@@ -4053,7 +4070,13 @@ def script_help():
 
         print()
 
-        choice = input("HELP >> ").strip()
+        # =============================================
+        # INPUT
+        # =============================================
+
+        choice = input(
+            f"{C.BRIGHT_CYAN}HELP >> {C.RESET}"
+        ).strip()
 
         # =============================================
         # EXIT
@@ -4064,7 +4087,7 @@ def script_help():
             break
 
         # =============================================
-        # CATEGORY
+        # VALID CATEGORY
         # =============================================
 
         if choice in HELP_CATEGORIES:
@@ -4109,17 +4132,17 @@ def cmd_help(command):
             script_error(
                 "INVALID_HELP_SYNTAX",
                 "Invalid help() syntax.",
-                "H01"
+                "H02"
             )
         )
 
         return
 
-    print(
-        f"{C.BRIGHT_WHITE}"
-        f"{HELP_TEXT}"
-        f"{C.RESET}"
-    )
+    # =============================================
+    # OPEN HELP MENU
+    # =============================================
+
+    script_help()
 # =========================================================
 # CIPHER-X SCRIPT ENGINE
 # PART 4 / 6
@@ -5231,57 +5254,6 @@ def debug_script_memory():
 # SCRIPT HELP
 # =========================================================
 
-def script_help():
-
-    print()
-
-    print(
-        f"{C.BRIGHT_MAGENTA}"
-        "============== LIGHT SCRIPT HELP =============="
-        f"{C.RESET}"
-    )
-
-    print()
-
-    help_lines = [
-
-        "int(name,value)",
-        "on(value)",
-        "display(name)",
-        "in dis (name)=1",
-
-        "func test(){...}",
-        "test.run()",
-
-        "if(condition){...}",
-        "while(condition){...}",
-        "repeat(count){...}",
-        "foreach(x in arr){...}",
-
-        "array(name)",
-        "push(arr,value)",
-        "remove(arr,index)",
-
-        "encrypt(value)",
-        "decrypt(value)",
-
-        "wait(sec)",
-        "settime(ms){...}",
-        "setInter(ms){...}",
-
-        'Example:',
-        'int(x,3);while(x>0){on(x);int(x,x-1);}on("FIRE!")',
-    ]
-
-    for line in help_lines:
-
-        print(
-            f"{C.BRIGHT_WHITE}"
-            f"{line}"
-            f"{C.RESET}"
-        )
-
-    print()
 
 # =========================================================
 # CLEAR SCRIPT MEMORY
@@ -5492,8 +5464,8 @@ def script_menu():
         # =============================================
 
         elif choice == "2":
-
-            script_help()
+           print("HELP OPEN")
+           script_help()
 
         # =============================================
         # CLEAR
