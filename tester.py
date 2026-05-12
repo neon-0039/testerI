@@ -22,21 +22,7 @@ import random
 SCRIPT_VARIABLES = {}
 SCRIPT_DISPLAYS = {}
 SCRIPT_FUNCTIONS = {}
-# =========================================================
-# ENGINE STATE
-# =========================================================
 
-ENGINE_STATE = {
-
-    "boot_time": time.time(),
-
-    "executed_commands": 0,
-    "scripts_executed": 0,
-
-    "runtime_errors": 0,
-
-    "last_error": None,
-}
 # =========================================================
 # COLOR SYSTEM
 # =========================================================
@@ -5044,6 +5030,10 @@ def cmd_trace(command):
 # EXECUTOR PATCH
 # =========================================================
 
+# =========================================================
+# ORIGINAL EXECUTE SAVE
+# =========================================================
+
 OLD_EXECUTE_COMMAND = execute_command
 
 # =========================================================
@@ -5053,6 +5043,10 @@ OLD_EXECUTE_COMMAND = execute_command
 def safe_execute_command(command):
 
     global SCRIPT_EXECUTION_DEPTH
+
+    # =============================================
+    # NORMALIZE
+    # =============================================
 
     command = str(command).strip()
 
@@ -5075,16 +5069,51 @@ def safe_execute_command(command):
 
         return
 
+    # =============================================
+    # DEPTH ENTER
+    # =============================================
+
     SCRIPT_EXECUTION_DEPTH += 1
 
     ENGINE_STATE["commands_executed"] += 1
 
+    # =============================================
+    # EXECUTION
+    # =============================================
+
     try:
 
-        execute_command(command)
+        # IMPORTANT:
+        # use original function
+        OLD_EXECUTE_COMMAND(command)
+
+    # =============================================
+    # CTRL+C
+    # =============================================
 
     except KeyboardInterrupt:
+
         raise
+
+    # =============================================
+    # RECURSION
+    # =============================================
+
+    except RecursionError:
+
+        ENGINE_STATE["fatal_errors"] += 1
+
+        print(
+            script_error(
+                "STACK_OVERFLOW",
+                "Maximum recursion depth exceeded.",
+                "P09"
+            )
+        )
+
+    # =============================================
+    # GENERIC
+    # =============================================
 
     except Exception as e:
 
@@ -5094,13 +5123,23 @@ def safe_execute_command(command):
             script_error(
                 "COMMAND_EXECUTION_FAILED",
                 str(e),
-                "P09"
+                "P10"
             )
         )
+
+    # =============================================
+    # DEPTH EXIT
+    # =============================================
 
     finally:
 
         SCRIPT_EXECUTION_DEPTH -= 1
+
+# =========================================================
+# PATCH ENGINE
+# =========================================================
+
+execute_command = safe_execute_command
 
 # =========================================================
 # PATCHED EXECUTE SCRIPT
@@ -5108,21 +5147,33 @@ def safe_execute_command(command):
 
 def execute_script(script):
 
+    # =============================================
+    # NULL
+    # =============================================
+
     if script is None:
 
         print(
             script_error(
                 "EMPTY_SCRIPT",
                 "Script is None.",
-                "P10"
+                "P11"
             )
         )
 
         return
 
+    # =============================================
+    # NORMALIZE
+    # =============================================
+
     script = str(script)
 
     ENGINE_STATE["scripts_executed"] += 1
+
+    # =============================================
+    # SPLIT
+    # =============================================
 
     commands = split_commands(script)
 
@@ -5132,11 +5183,15 @@ def execute_script(script):
             script_error(
                 "SCRIPT_SPLIT_FAILURE",
                 "Command parser failed.",
-                "P11"
+                "P12"
             )
         )
 
         return
+
+    # =============================================
+    # EXECUTE
+    # =============================================
 
     for command in commands:
 
@@ -5145,9 +5200,7 @@ def execute_script(script):
         if command == "":
             continue
 
-        safe_execute_command(command)
-
-# =========================================================
+        safe_execute_command(command)# =========================================================
 # DEBUG MEMORY VIEWER
 # =========================================================
 
@@ -5915,7 +5968,28 @@ def main():
             )
 
             time.sleep(1)
+# =========================================================
+# ENGINE STATE RECOVERY
+# =========================================================
 
+ENGINE_STATE = {
+
+    "boot_time": time.time(),
+
+    "executed_commands": 0,
+    "scripts_executed": 0,
+
+    "runtime_errors": 0,
+
+    "last_error": None,
+}
+# =========================================================
+# LEGACY COMMAND SPLITTER
+# =========================================================
+
+def split_commands(script):
+
+    return split_script_commands(script)
 # =========================================================
 # ENTRY POINT
 # =========================================================
