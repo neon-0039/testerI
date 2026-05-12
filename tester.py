@@ -202,156 +202,6 @@ def splash_screen():
     print()
 
 # =========================================================
-# BETTER MAIN MENU
-# =========================================================
-
-def main():
-
-    while True:
-
-        splash_screen()
-
-        ui_title("MAIN MENU")
-
-        ui_menu(1, "LIGHT SCRIPT", C.BRIGHT_GREEN)
-        ui_menu(2, "ENCRYPT TEXT", C.BRIGHT_CYAN)
-        ui_menu(3, "DECRYPT TEXT", C.BRIGHT_YELLOW)
-        ui_menu(4, "EXIT", C.BRIGHT_RED)
-
-        print()
-
-        try:
-
-            choice = ui_input("SYSTEM").strip()
-
-        except KeyboardInterrupt:
-
-            print()
-            break
-
-        except EOFError:
-
-            print(
-                script_error(
-                    "MAIN_INPUT_ERROR",
-                    "Input stream closed.",
-                    "SYS01"
-                )
-            )
-
-            break
-
-        # =====================================================
-        # LIGHT SCRIPT
-        # =====================================================
-
-        if choice == "1":
-
-            process_script_engine()
-
-        # =====================================================
-        # ENCRYPT
-        # =====================================================
-
-        elif choice == "2":
-
-            print()
-
-            ui_title("ENCRYPT")
-
-            text = ui_input("TEXT")
-
-            try:
-
-                result = encrypt(text)
-
-                print()
-
-                ui_line(C.BRIGHT_CYAN)
-
-                print(
-                    f"{C.BRIGHT_CYAN}"
-                    f"{result}"
-                    f"{C.RESET}"
-                )
-
-                ui_line(C.BRIGHT_CYAN)
-
-            except Exception as e:
-
-                print(
-                    script_error(
-                        "ENCRYPTION_FAILURE",
-                        str(e),
-                        "ENCX"
-                    )
-                )
-
-        # =====================================================
-        # DECRYPT
-        # =====================================================
-
-        elif choice == "3":
-
-            print()
-
-            ui_title("DECRYPT")
-
-            text = ui_input("CIPHER")
-
-            try:
-
-                result = decrypt(text)
-
-                print()
-
-                ui_line(C.BRIGHT_GREEN)
-
-                print(
-                    f"{C.BRIGHT_GREEN}"
-                    f"{result}"
-                    f"{C.RESET}"
-                )
-
-                ui_line(C.BRIGHT_GREEN)
-
-            except Exception as e:
-
-                print(
-                    script_error(
-                        "DECRYPTION_FAILURE",
-                        str(e),
-                        "DECX"
-                    )
-                )
-
-        # =====================================================
-        # EXIT
-        # =====================================================
-
-        elif choice == "4":
-
-            print()
-
-            ui_title("SYSTEM CLOSED")
-
-            break
-
-        # =====================================================
-        # INVALID
-        # =====================================================
-
-        else:
-
-            print(
-                script_error(
-                    "INVALID_MAIN_MENU",
-                    "Unknown menu index.",
-                    "SYS02"
-                )
-            )
-
-# =========================================================
 # SLOW PRINT
 # =========================================================
 
@@ -951,6 +801,14 @@ def decrypt(cipher):
     return result
 
 # =========================================================
+# FATAL ERROR HANDLER
+# =========================================================
+
+def fatal(code, message, errno):
+    """Fatal error handler"""
+    return f"[{errno}] {code}: {message}"
+
+# =========================================================
 # SCRIPT ENGINE UI
 # =========================================================
 
@@ -1318,7 +1176,7 @@ SAFE_EXPRESSION_PATTERN = re.compile(
 )
 
 # =========================================================
-# SAFE EVAL
+# SAFE EVAL - REDEFINED FOR SCRIPT ENGINE
 # =========================================================
 
 def safe_eval(expression):
@@ -2371,6 +2229,96 @@ def cmd_while(command):
             return
 
 # =========================================================
+# CUSTOM COMMAND SPLITTER FOR CIPHER-X
+# =========================================================
+
+def split_cipher_commands(script):
+    """Split script into commands based on semicolons"""
+    commands = []
+    current = []
+    brace_depth = 0
+    paren_depth = 0
+    bracket_depth = 0
+    in_string = False
+    escape = False
+
+    for char in script:
+        if escape:
+            current.append(char)
+            escape = False
+            continue
+
+        if char == "\\":
+            current.append(char)
+            escape = True
+            continue
+
+        if char == '"':
+            in_string = not in_string
+            current.append(char)
+            continue
+
+        if in_string:
+            current.append(char)
+            continue
+
+        if char == "}":
+            brace_depth -= 1
+            current.append(char)
+            
+            # ブレース閉じ後にセミコロンがなくても、brace_depthが0になったらコマンド完成
+            if brace_depth == 0:
+                # 次の文字を確認せずにここで決定
+                pass
+            continue
+            
+        if char == "}":
+            brace_depth -= 1
+            current.append(char)
+            continue
+
+        if char == "(":
+            paren_depth += 1
+            current.append(char)
+            continue
+
+        if char == ")":
+            paren_depth -= 1
+            current.append(char)
+            continue
+
+        if char == "[":
+            bracket_depth += 1
+            current.append(char)
+            continue
+
+        if char == "]":
+            bracket_depth -= 1
+            current.append(char)
+            continue
+
+                # セミコロンでコマンド分割（すべてのブロックが閉じている場合のみ）
+        if (
+            char == ";"
+            and brace_depth == 0
+            and paren_depth == 0
+            and bracket_depth == 0
+            and not in_string
+        ):
+            command = "".join(current).strip()
+            if command:
+                commands.append(command)
+            current = []
+            continue
+
+        current.append(char)
+
+    final_command = "".join(current).strip()
+    if final_command:
+        commands.append(final_command)
+
+    return commands
+# =========================================================
 # COMMAND EXECUTOR
 # =========================================================
 
@@ -2528,246 +2476,22 @@ def execute_command(command):
 
 def execute_script(script):
 
-    commands = []
+    script = str(script).strip()
 
-    current = []
-
-    brace_depth = 0
-    paren_depth = 0
-    bracket_depth = 0
-
-    in_string = False
-    escape = False
-
-    for char in script:
-
-        # =============================================
-        # ESCAPE
-        # =============================================
-
-        if escape:
-
-            current.append(char)
-
-            escape = False
-            continue
-
-        if char == "\\":
-
-            current.append(char)
-
-            escape = True
-            continue
-
-        # =============================================
-        # STRING TOGGLE
-        # =============================================
-
-        if char == '"':
-
-            in_string = not in_string
-
-            current.append(char)
-            continue
-
-        # =============================================
-        # INSIDE STRING
-        # =============================================
-
-        if in_string:
-
-            current.append(char)
-            continue
-
-        # =============================================
-        # DEPTH TRACK
-        # =============================================
-
-        if char == "{":
-
-            brace_depth += 1
-
-            current.append(char)
-            continue
-
-        if char == "}":
-
-            brace_depth -= 1
-
-            if brace_depth < 0:
-
-                print(
-                    script_error(
-                        "UNEXPECTED_BRACE_CLOSE",
-                        "Unexpected '}' detected.",
-                        "S30"
-                    )
-                )
-
-                return
-
-            current.append(char)
-            continue
-
-        if char == "(":
-
-            paren_depth += 1
-            current.append(char)
-            continue
-
-        if char == ")":
-
-            paren_depth -= 1
-
-            if paren_depth < 0:
-
-                print(
-                    script_error(
-                        "UNEXPECTED_PAREN_CLOSE",
-                        "Unexpected ')' detected.",
-                        "S30A"
-                    )
-                )
-
-                return
-
-            current.append(char)
-            continue
-
-        if char == "[":
-
-            bracket_depth += 1
-            current.append(char)
-            continue
-
-        if char == "]":
-
-            bracket_depth -= 1
-
-            if bracket_depth < 0:
-
-                print(
-                    script_error(
-                        "UNEXPECTED_BRACKET_CLOSE",
-                        "Unexpected ']' detected.",
-                        "S30B"
-                    )
-                )
-
-                return
-
-            current.append(char)
-            continue
-
-        # =============================================
-        # COMMAND SPLIT
-        # =============================================
-
-        if (
-            char == ";"
-            and brace_depth == 0
-            and paren_depth == 0
-            and bracket_depth == 0
-            and not in_string
-        ):
-
-            command = "".join(current).strip()
-
-            if command != "":
-
-                commands.append(command)
-
-            current = []
-
-            continue
-
-        # =============================================
-        # NORMAL CHAR
-        # =============================================
-
-        current.append(char)
-
-    # =============================================
-    # STRING NOT CLOSED
-    # =============================================
-
-    if in_string:
-
-        print(
-            script_error(
-                "STRING_NOT_TERMINATED",
-                'String literal was not closed.',
-                "S31"
-            )
-        )
-
+    if script == "":
         return
 
-    # =============================================
-    # BRACE NOT CLOSED
-    # =============================================
-
-    if brace_depth != 0:
-
-        print(
-            script_error(
-                "BRACE_NOT_TERMINATED",
-                "Block scope was not closed.",
-                "S32"
-            )
-        )
-
-        return
-
-    # =============================================
-    # PAREN NOT CLOSED
-    # =============================================
-
-    if paren_depth != 0:
-
-        print(
-            script_error(
-                "PAREN_NOT_TERMINATED",
-                "Parenthesis scope was not closed.",
-                "S32A"
-            )
-        )
-
-        return
-
-    # =============================================
-    # BRACKET NOT CLOSED
-    # =============================================
-
-    if bracket_depth != 0:
-
-        print(
-            script_error(
-                "BRACKET_NOT_TERMINATED",
-                "Bracket scope was not closed.",
-                "S32B"
-            )
-        )
-
-        return
-
-    # =============================================
-    # FINAL COMMAND
-    # =============================================
-
-    final_command = "".join(current).strip()
-
-    if final_command != "":
-
-        commands.append(final_command)
-
-    # =============================================
-    # EXECUTION
-    # =============================================
+    commands = split_cipher_commands(script)
 
     for command in commands:
 
+        command = str(command).strip()
+
+        if command == "":
+            continue
+
         execute_command(command)
+
 # =========================================================
 # CIPHER-X SCRIPT ENGINE
 # PART 3 / 6
@@ -3640,19 +3364,6 @@ def cmd_memory(command):
 # HELP SYSTEM
 # =========================================================
 
-# =========================================================
-# HELP MENU SYSTEM
-# =========================================================
-
-
-# =========================================================
-# HELP MENU
-# =========================================================
-
-# =========================================================
-# HELP MENU SYSTEM
-# =========================================================
-
 HELP_CATEGORIES = {
 
     "1": {
@@ -4030,19 +3741,26 @@ wait(1)
 # HELP MENU
 # =========================================================
 
-# =========================================================
-# HELP MENU
-# =========================================================
-
 def script_help():
-    print("SCRIPT_HELP_START")
+
     while True:
 
         print()
 
         print(
             f"{C.BRIGHT_MAGENTA}"
-            "================ HELP MENU ================"
+            "╔════════════════════════════════════════════════╗"
+        )
+
+        print(
+            f"{C.BRIGHT_MAGENTA}"
+            "║             HELP MENU                         ║"
+            f"{C.RESET}"
+        )
+
+        print(
+            f"{C.BRIGHT_MAGENTA}"
+            "╚════════════════════════════════════════════════╝"
             f"{C.RESET}"
         )
 
@@ -4056,7 +3774,7 @@ def script_help():
 
             print(
                 f"{C.BRIGHT_GREEN}"
-                f"[{key}] "
+                f"  [{key:>2}] "
                 f"{value['title']}"
                 f"{C.RESET}"
             )
@@ -4065,7 +3783,7 @@ def script_help():
 
         print(
             f"{C.BRIGHT_RED}"
-            "[0] EXIT HELP"
+            "  [ 0] EXIT HELP"
             f"{C.RESET}"
         )
 
@@ -4139,1205 +3857,23 @@ def cmd_help(command):
 
         return
 
-    # =============================================
-    # OPEN HELP MENU
-    # =============================================
-
     script_help()
-# =========================================================
-# CIPHER-X SCRIPT ENGINE
-# PART 4 / 6
-# ADVANCED EXECUTION PATCH
-# =========================================================
 
 # =========================================================
-# IMPORTS
+# ENGINE STATE
 # =========================================================
 
-import traceback
+ENGINE_STATE = {
 
-# =========================================================
-# TRACEBACK FORMATTER
-# =========================================================
+    "boot_time": time.time(),
 
-def format_traceback(error):
+    "executed_commands": 0,
+    "scripts_executed": 0,
 
-    try:
+    "runtime_errors": 0,
 
-        tb = traceback.format_exc()
-
-        if tb.strip() == "NoneType: None":
-            return str(error)
-
-        return tb
-
-    except:
-
-        return str(error)
-
-# =========================================================
-# STRICT BOOLEAN
-# =========================================================
-
-def strict_bool(value):
-
-    if value is True:
-        return True
-
-    if value is False:
-        return False
-
-    if isinstance(value, (int, float)):
-
-        return value != 0
-
-    if isinstance(value, str):
-
-        lower = value.lower().strip()
-
-        if lower in ("true", "yes", "on", "1"):
-            return True
-
-        if lower in ("false", "no", "off", "0", ""):
-            return False
-
-    return bool(value)
-
-# =========================================================
-# EXPRESSION PREPROCESSOR
-# =========================================================
-
-def preprocess_expression(expression):
-
-    expression = str(expression)
-
-    # =============================================
-    # true / false
-    # =============================================
-
-    expression = re.sub(
-        r'\btrue\b',
-        'True',
-        expression,
-        flags=re.IGNORECASE
-    )
-
-    expression = re.sub(
-        r'\bfalse\b',
-        'False',
-        expression,
-        flags=re.IGNORECASE
-    )
-
-    # =============================================
-    # && → and
-    # =============================================
-
-    expression = expression.replace(
-        "&&",
-        " and "
-    )
-
-    # =============================================
-    # || → or
-    # =============================================
-
-    expression = expression.replace(
-        "||",
-        " or "
-    )
-
-    # =============================================
-    # ! → not
-    # =============================================
-
-    expression = re.sub(
-        r'(?<![=!])!(?!=)',
-        ' not ',
-        expression
-    )
-
-    return expression
-
-# =========================================================
-# SAFE EVAL PATCH
-# =========================================================
-
-def safe_eval(expression):
-
-    expression = str(expression).strip()
-
-    expression = preprocess_expression(
-        expression
-    )
-
-    # =============================================
-    # EMPTY
-    # =============================================
-
-    if expression == "":
-
-        raise ValueError(
-            "Expression is empty."
-        )
-
-    # =============================================
-    # UNSAFE CHECK
-    # =============================================
-
-    blocked_keywords = [
-
-        "__",
-        "import",
-        "exec",
-        "eval",
-        "open",
-        "compile",
-        "globals",
-        "locals",
-        "vars",
-        "dir",
-        "os",
-        "sys",
-        "subprocess",
-        "input",
-    ]
-
-    lower = expression.lower()
-
-    for keyword in blocked_keywords:
-
-        if keyword in lower:
-
-            raise ValueError(
-                f"Blocked keyword detected: {keyword}"
-            )
-
-    # =============================================
-    # SAFE CHARACTER CHECK
-    # =============================================
-
-    allowed_pattern = re.compile(
-        r'^[A-Za-z0-9_\s\+\-\*\/%\(\)\<\>\=\!\&\|\.\,\[\]]+$'
-    )
-
-    if not allowed_pattern.fullmatch(expression):
-
-        raise ValueError(
-            "Unsafe character detected."
-        )
-
-    # =============================================
-    # SAFE ENVIRONMENT
-    # =============================================
-
-    safe_globals = {
-        "__builtins__": {}
-    }
-
-    safe_locals = {
-
-        **SCRIPT_VARIABLES,
-
-        "True": True,
-        "False": False,
-
-        "M": type(
-            "MathModule",
-            (),
-            {
-                "random": random.random,
-                "floor": math.floor,
-                "round": round,
-                "abs": abs,
-                "sqrt": math.sqrt,
-                "pow": pow,
-                "max": max,
-                "min": min,
-            }
-        )()
-    }
-
-    # =============================================
-    # EXECUTE
-    # =============================================
-
-    try:
-
-        return eval(
-            expression,
-            safe_globals,
-            safe_locals
-        )
-
-    except NameError as e:
-
-        raise NameError(
-            f"Variable not found: {e}"
-        )
-
-    except SyntaxError as e:
-
-        raise SyntaxError(
-            f"Syntax error: {e}"
-        )
-
-    except Exception as e:
-
-        raise RuntimeError(
-            f"Evaluation failed: {e}"
-        )
-
-# =========================================================
-# ADVANCED VALUE PARSER
-# =========================================================
-
-def parse_value(value):
-
-    if value is None:
-        return ""
-
-    value = str(value).strip()
-
-    # =============================================
-    # STRING
-    # =============================================
-
-    if (
-        len(value) >= 2
-        and value.startswith('"')
-        and value.endswith('"')
-    ):
-
-        return value[1:-1]
-
-    # =============================================
-    # BOOLEAN
-    # =============================================
-
-    lower = value.lower()
-
-    if lower == "true":
-        return True
-
-    if lower == "false":
-        return False
-
-    # =============================================
-    # INTEGER
-    # =============================================
-
-    if re.fullmatch(r'-?\d+', value):
-
-        try:
-
-            return int(value)
-
-        except:
-
-            pass
-
-    # =============================================
-    # FLOAT
-    # =============================================
-
-    if re.fullmatch(r'-?\d+\.\d+', value):
-
-        try:
-
-            return float(value)
-
-        except:
-
-            pass
-
-    # =============================================
-    # ARRAY ACCESS
-    # =============================================
-
-    array_match = re.fullmatch(
-        r'([A-Za-z_][A-Za-z0-9_]*)\[(.+)\]',
-        value
-    )
-
-    if array_match:
-
-        array_name = array_match.group(1)
-        raw_index = array_match.group(2).strip()
-
-        if array_name not in SCRIPT_VARIABLES:
-
-            raise RuntimeError(
-                f"Array '{array_name}' does not exist."
-            )
-
-        target = SCRIPT_VARIABLES[array_name]
-
-        if not isinstance(target, list):
-
-            raise RuntimeError(
-                f"'{array_name}' is not array."
-            )
-
-        try:
-
-            index = safe_eval(raw_index)
-
-        except Exception as e:
-
-            raise RuntimeError(
-                f"Invalid array index: {e}"
-            )
-
-        try:
-
-            return target[index]
-
-        except Exception:
-
-            raise RuntimeError(
-                f"Array index out of range."
-            )
-
-    # =============================================
-    # VARIABLE
-    # =============================================
-
-    if value in SCRIPT_VARIABLES:
-
-        return SCRIPT_VARIABLES[value]
-
-    # =============================================
-    # EXPRESSION
-    # =============================================
-
-    try:
-
-        return safe_eval(value)
-
-    except:
-
-        pass
-
-    # =============================================
-    # RAW
-    # =============================================
-
-    return value
-
-# =========================================================
-# ARRAY PUSH
-# =========================================================
-
-def cmd_push(command):
-
-    match = re.fullmatch(
-        r'push\((.+?),(.+)\)',
-        command,
-        re.DOTALL
-    )
-
-    if not match:
-
-        print(
-            script_error(
-                "INVALID_PUSH_SYNTAX",
-                "Invalid push() syntax.",
-                "AR01"
-            )
-        )
-
-        return
-
-    name = match.group(1).strip()
-    raw_value = match.group(2).strip()
-
-    # =============================================
-    # EXISTS
-    # =============================================
-
-    if name not in SCRIPT_VARIABLES:
-
-        print(
-            script_error(
-                "ARRAY_NOT_FOUND",
-                f"Array '{name}' does not exist.",
-                "AR02"
-            )
-        )
-
-        return
-
-    target = SCRIPT_VARIABLES[name]
-
-    if not isinstance(target, list):
-
-        print(
-            script_error(
-                "TARGET_NOT_ARRAY",
-                f"'{name}' is not array.",
-                "AR03"
-            )
-        )
-
-        return
-
-    # =============================================
-    # PARSE VALUE
-    # =============================================
-
-    try:
-
-        value = parse_value(raw_value)
-
-    except Exception as e:
-
-        print(
-            script_error(
-                "PUSH_PARSE_ERROR",
-                str(e),
-                "AR04"
-            )
-        )
-
-        return
-
-    # =============================================
-    # PUSH
-    # =============================================
-
-    target.append(value)
-
-# =========================================================
-# ARRAY REMOVE
-# =========================================================
-
-def cmd_remove(command):
-
-    match = re.fullmatch(
-        r'remove\((.+?),(.+)\)',
-        command,
-        re.DOTALL
-    )
-
-    if not match:
-
-        print(
-            script_error(
-                "INVALID_REMOVE_SYNTAX",
-                "Invalid remove() syntax.",
-                "AR05"
-            )
-        )
-
-        return
-
-    name = match.group(1).strip()
-    raw_index = match.group(2).strip()
-
-    if name not in SCRIPT_VARIABLES:
-
-        print(
-            script_error(
-                "ARRAY_NOT_FOUND",
-                f"Array '{name}' does not exist.",
-                "AR06"
-            )
-        )
-
-        return
-
-    target = SCRIPT_VARIABLES[name]
-
-    if not isinstance(target, list):
-
-        print(
-            script_error(
-                "TARGET_NOT_ARRAY",
-                f"'{name}' is not array.",
-                "AR07"
-            )
-        )
-
-        return
-
-    # =============================================
-    # INDEX
-    # =============================================
-
-    try:
-
-        index = int(
-            parse_value(raw_index)
-        )
-
-    except Exception:
-
-        print(
-            script_error(
-                "INVALID_ARRAY_INDEX",
-                "Array index must be integer.",
-                "AR08"
-            )
-        )
-
-        return
-
-    # =============================================
-    # RANGE CHECK
-    # =============================================
-
-    if index < 0 or index >= len(target):
-
-        print(
-            script_error(
-                "ARRAY_INDEX_OUT_OF_RANGE",
-                f"Index '{index}' out of range.",
-                "AR09"
-            )
-        )
-
-        return
-
-    # =============================================
-    # REMOVE
-    # =============================================
-
-    target.pop(index)
-
-# =========================================================
-# ARRAY LENGTH
-# =========================================================
-
-def cmd_length(command):
-
-    match = re.fullmatch(
-        r'length\((.+?)\)',
-        command
-    )
-
-    if not match:
-
-        print(
-            script_error(
-                "INVALID_LENGTH_SYNTAX",
-                "Invalid length() syntax.",
-                "AR10"
-            )
-        )
-
-        return
-
-    name = match.group(1).strip()
-
-    if name not in SCRIPT_VARIABLES:
-
-        print(
-            script_error(
-                "ARRAY_NOT_FOUND",
-                f"'{name}' does not exist.",
-                "AR11"
-            )
-        )
-
-        return
-
-    target = SCRIPT_VARIABLES[name]
-
-    if not isinstance(target, list):
-
-        print(
-            script_error(
-                "TARGET_NOT_ARRAY",
-                f"'{name}' is not array.",
-                "AR12"
-            )
-        )
-
-        return
-
-    engine_output(len(target))
-
-# =========================================================
-# TRY SYSTEM
-# =========================================================
-
-def cmd_try(command):
-
-    match = re.fullmatch(
-        r'try\s*\{(.*)\}\s*catch\s*\{(.*)\}',
-        command,
-        re.DOTALL
-    )
-
-    if not match:
-
-        print(
-            script_error(
-                "INVALID_TRY_SYNTAX",
-                "Invalid try-catch syntax.",
-                "TR01"
-            )
-        )
-
-        return
-
-    try_body = match.group(1).strip()
-    catch_body = match.group(2).strip()
-
-    if try_body == "":
-
-        print(
-            script_error(
-                "EMPTY_TRY_BODY",
-                "try body cannot be empty.",
-                "TR02"
-            )
-        )
-
-        return
-
-    if catch_body == "":
-
-        print(
-            script_error(
-                "EMPTY_CATCH_BODY",
-                "catch body cannot be empty.",
-                "TR03"
-            )
-        )
-
-        return
-
-    # =============================================
-    # EXECUTE TRY
-    # =============================================
-
-    try:
-
-        execute_script(try_body)
-
-    except Exception:
-
-        SCRIPT_VARIABLES["_error"] = (
-            traceback.format_exc()
-        )
-
-        try:
-
-            execute_script(catch_body)
-
-        except Exception as e:
-
-            print(
-                script_error(
-                    "CATCH_RUNTIME_ERROR",
-                    str(e),
-                    "TR04"
-                )
-            )
-
-# =========================================================
-# THROW SYSTEM
-# =========================================================
-
-def cmd_throw(command):
-
-    match = re.fullmatch(
-        r'throw\((.+)\)',
-        command,
-        re.DOTALL
-    )
-
-    if not match:
-
-        print(
-            script_error(
-                "INVALID_THROW_SYNTAX",
-                "Invalid throw() syntax.",
-                "TR05"
-            )
-        )
-
-        return
-
-    raw = match.group(1).strip()
-
-    value = parse_value(raw)
-
-    raise RuntimeError(str(value))
-
-# =========================================================
-# ASSERT SYSTEM
-# =========================================================
-
-def cmd_assert(command):
-
-    match = re.fullmatch(
-        r'assert\((.+?)\)',
-        command,
-        re.DOTALL
-    )
-
-    if not match:
-
-        print(
-            script_error(
-                "INVALID_ASSERT_SYNTAX",
-                "Invalid assert() syntax.",
-                "TR06"
-            )
-        )
-
-        return
-
-    expression = match.group(1).strip()
-
-    try:
-
-        result = safe_eval(expression)
-
-    except Exception as e:
-
-        print(
-            script_error(
-                "ASSERT_EVALUATION_FAILED",
-                str(e),
-                "TR07"
-            )
-        )
-
-        return
-
-    if not strict_bool(result):
-
-        print(
-            script_error(
-                "ASSERTION_FAILED",
-                expression,
-                "TR08"
-            )
-        )
-
-# =========================================================
-# TYPE SYSTEM
-# =========================================================
-
-def cmd_type(command):
-
-    match = re.fullmatch(
-        r'type\((.+)\)',
-        command
-    )
-
-    if not match:
-
-        print(
-            script_error(
-                "INVALID_TYPE_SYNTAX",
-                "Invalid type() syntax.",
-                "TP01"
-            )
-        )
-
-        return
-
-    raw = match.group(1).strip()
-
-    try:
-
-        value = parse_value(raw)
-
-    except Exception as e:
-
-        print(
-            script_error(
-                "TYPE_PARSE_ERROR",
-                str(e),
-                "TP02"
-            )
-        )
-
-        return
-
-    typename = type(value).__name__
-
-    engine_output(typename)
-
-# =========================================================
-# EXISTS SYSTEM
-# =========================================================
-
-def cmd_exists(command):
-
-    match = re.fullmatch(
-        r'exists\((.+?)\)',
-        command
-    )
-
-    if not match:
-
-        print(
-            script_error(
-                "INVALID_EXISTS_SYNTAX",
-                "Invalid exists() syntax.",
-                "EX01"
-            )
-        )
-
-        return
-
-    name = match.group(1).strip()
-
-    result = (
-        name in SCRIPT_VARIABLES
-        or name in SCRIPT_FUNCTIONS
-        or name in SCRIPT_DISPLAYS
-    )
-
-    engine_output(result)
-
-# =========================================================
-# PRINT TRACEBACK
-# =========================================================
-
-def cmd_trace(command):
-
-    if command != "trace()":
-
-        print(
-            script_error(
-                "INVALID_TRACE_SYNTAX",
-                "Invalid trace() syntax.",
-                "TR09"
-            )
-        )
-
-        return
-
-    error = SCRIPT_VARIABLES.get(
-        "_error",
-        "[ NO TRACEBACK ]"
-    )
-
-    print(
-        f"{C.BRIGHT_RED}"
-        f"{error}"
-        f"{C.RESET}"
-    )
-
-# =========================================================
-# EXECUTOR PATCH
-# =========================================================
-
-# =========================================================
-# ORIGINAL EXECUTE SAVE
-# =========================================================
-
-OLD_EXECUTE_COMMAND = execute_command
-
-# =========================================================
-# SAFE EXECUTE COMMAND
-# =========================================================
-
-def safe_execute_command(command):
-
-    global SCRIPT_EXECUTION_DEPTH
-
-    # =============================================
-    # NORMALIZE
-    # =============================================
-
-    command = str(command).strip()
-
-    if command == "":
-        return
-
-    # =============================================
-    # DEPTH LIMIT
-    # =============================================
-
-    if SCRIPT_EXECUTION_DEPTH >= MAX_SCRIPT_EXECUTION_DEPTH:
-
-        print(
-            script_error(
-                "MAX_EXECUTION_DEPTH",
-                "Maximum execution depth exceeded.",
-                "P08"
-            )
-        )
-
-        return
-
-    # =============================================
-    # DEPTH ENTER
-    # =============================================
-
-    SCRIPT_EXECUTION_DEPTH += 1
-
-    ENGINE_STATE["commands_executed"] += 1
-
-    # =============================================
-    # EXECUTION
-    # =============================================
-
-    try:
-
-        # IMPORTANT:
-        # use original function
-        OLD_EXECUTE_COMMAND(command)
-
-    # =============================================
-    # CTRL+C
-    # =============================================
-
-    except KeyboardInterrupt:
-
-        raise
-
-    # =============================================
-    # RECURSION
-    # =============================================
-
-    except RecursionError:
-
-        ENGINE_STATE["fatal_errors"] += 1
-
-        print(
-            script_error(
-                "STACK_OVERFLOW",
-                "Maximum recursion depth exceeded.",
-                "P09"
-            )
-        )
-
-    # =============================================
-    # GENERIC
-    # =============================================
-
-    except Exception as e:
-
-        ENGINE_STATE["fatal_errors"] += 1
-
-        print(
-            script_error(
-                "COMMAND_EXECUTION_FAILED",
-                str(e),
-                "P10"
-            )
-        )
-
-    # =============================================
-    # DEPTH EXIT
-    # =============================================
-
-    finally:
-
-        SCRIPT_EXECUTION_DEPTH -= 1
-
-# =========================================================
-# PATCH ENGINE
-# =========================================================
-
-execute_command = safe_execute_command
-
-# =========================================================
-# PATCHED EXECUTE SCRIPT
-# =========================================================
-
-def execute_script(script):
-
-    # =============================================
-    # NULL
-    # =============================================
-
-    if script is None:
-
-        print(
-            script_error(
-                "EMPTY_SCRIPT",
-                "Script is None.",
-                "P11"
-            )
-        )
-
-        return
-
-    # =============================================
-    # NORMALIZE
-    # =============================================
-
-    script = str(script)
-
-    ENGINE_STATE["scripts_executed"] += 1
-
-    # =============================================
-    # SPLIT
-    # =============================================
-
-    commands = split_commands(script)
-
-    if not isinstance(commands, list):
-
-        print(
-            script_error(
-                "SCRIPT_SPLIT_FAILURE",
-                "Command parser failed.",
-                "P12"
-            )
-        )
-
-        return
-
-    # =============================================
-    # EXECUTE
-    # =============================================
-
-    for command in commands:
-
-        command = str(command).strip()
-
-        if command == "":
-            continue
-
-        safe_execute_command(command)# =========================================================
-# DEBUG MEMORY VIEWER
-# =========================================================
-
-def debug_script_memory():
-
-    print()
-
-    print(
-        f"{C.BRIGHT_CYAN}"
-        "=========== SCRIPT MEMORY ==========="
-        f"{C.RESET}"
-    )
-
-    print()
-
-    # =============================================
-    # VARIABLES
-    # =============================================
-
-    print(
-        f"{C.BRIGHT_GREEN}[ VARIABLES ]{C.RESET}"
-    )
-
-    if SCRIPT_VARIABLES:
-
-        for key, value in SCRIPT_VARIABLES.items():
-
-            print(
-                f"{C.WHITE}"
-                f"{key}"
-                f"{C.BRIGHT_BLACK} = "
-                f"{C.BRIGHT_YELLOW}{repr(value)}"
-                f"{C.RESET}"
-            )
-
-    else:
-
-        print(
-            f"{C.BRIGHT_BLACK}EMPTY{C.RESET}"
-        )
-
-    print()
-
-    # =============================================
-    # FUNCTIONS
-    # =============================================
-
-    print(
-        f"{C.BRIGHT_CYAN}[ FUNCTIONS ]{C.RESET}"
-    )
-
-    if SCRIPT_FUNCTIONS:
-
-        for key in SCRIPT_FUNCTIONS.keys():
-
-            print(
-                f"{C.BRIGHT_WHITE}"
-                f"{key}()"
-                f"{C.RESET}"
-            )
-
-    else:
-
-        print(
-            f"{C.BRIGHT_BLACK}EMPTY{C.RESET}"
-        )
-
-    print()
-
-    # =============================================
-    # TOUCH BINDS
-    # =============================================
-
-    print(
-        f"{C.BRIGHT_YELLOW}[ TOUCH BINDS ]{C.RESET}"
-    )
-
-    for key, value in TOUCH_BINDINGS.items():
-
-        state = "BOUND" if value else "EMPTY"
-
-        print(
-            f"{C.WHITE}"
-            f"{key.upper()}"
-            f"{C.BRIGHT_BLACK} : "
-            f"{state}"
-            f"{C.RESET}"
-        )
-
-    print()
-
-    # =============================================
-    # ENGINE
-    # =============================================
-
-    print(
-        f"{C.BRIGHT_MAGENTA}[ ENGINE ]{C.RESET}"
-    )
-
-    for key, value in ENGINE_STATE.items():
-
-        print(
-            f"{C.WHITE}"
-            f"{key}"
-            f"{C.BRIGHT_BLACK} = "
-            f"{C.BRIGHT_CYAN}{value}"
-            f"{C.RESET}"
-        )
-
-    print()
-
-    print(
-        f"{C.BRIGHT_CYAN}"
-        "====================================="
-        f"{C.RESET}"
-    )
-
-# =========================================================
-# SCRIPT HELP
-# =========================================================
-
-
-# =========================================================
-# CLEAR SCRIPT MEMORY
-# =========================================================
-
-def clear_script_memory():
-
-    SCRIPT_VARIABLES.clear()
-    SCRIPT_DISPLAYS.clear()
-    SCRIPT_FUNCTIONS.clear()
-
-    ACTIVE_INTERVALS.clear()
-
-    for key in TOUCH_BINDINGS.keys():
-
-        TOUCH_BINDINGS[key] = None
+    "last_error": None,
+}
 
 # =========================================================
 # SCRIPT CONSOLE
@@ -5350,19 +3886,31 @@ def script_console():
         print()
 
         print(
-            f"{C.BRIGHT_MAGENTA}[SCRIPT]{C.WHITE} "
-            f"Enter Script"
+            f"{C.BRIGHT_MAGENTA}"
+            "╔════════════════════════════════════════════════╗"
         )
 
         print(
-            f"{C.BRIGHT_BLACK}"
-            "Use ';' to separate commands"
+            f"{C.BRIGHT_MAGENTA}"
+            "║          LIGHT SCRIPT CONSOLE                ║"
+            f"{C.RESET}"
+        )
+
+        print(
+            f"{C.BRIGHT_MAGENTA}"
+            "╚════════════════════════════════════════════════╝"
             f"{C.RESET}"
         )
 
         print(
             f"{C.BRIGHT_BLACK}"
-            "Type 'exit' to return"
+            "  Use ';' to separate commands"
+            f"{C.RESET}"
+        )
+
+        print(
+            f"{C.BRIGHT_BLACK}"
+            "  Type 'exit' to return"
             f"{C.RESET}"
         )
 
@@ -5450,7 +3998,7 @@ def script_console():
             print(
                 script_error(
                     "SCRIPT_RUNTIME_FAILURE",
-                    format_traceback(e),
+                    str(e),
                     "P13"
                 )
             )
@@ -5466,23 +4014,42 @@ def script_menu():
         print()
 
         print(
-            f"{C.BRIGHT_GREEN}[1]{C.WHITE} Run Script"
+            f"{C.BRIGHT_MAGENTA}"
+            "╔════════════════════════════════════════════════╗"
         )
 
         print(
-            f"{C.BRIGHT_CYAN}[2]{C.WHITE} Help"
+            f"{C.BRIGHT_MAGENTA}"
+            "║          LIGHT SCRIPT MENU                   ║"
+            f"{C.RESET}"
         )
 
         print(
-            f"{C.BRIGHT_YELLOW}[3]{C.WHITE} Clear Memory"
+            f"{C.BRIGHT_MAGENTA}"
+            "╚════════════════════════════════════════════════╝"
+            f"{C.RESET}"
+        )
+
+        print()
+
+        print(
+            f"{C.BRIGHT_GREEN}  [1]{C.WHITE} Run Script"
         )
 
         print(
-            f"{C.BRIGHT_BLUE}[4]{C.WHITE} Debug Memory"
+            f"{C.BRIGHT_CYAN}  [2]{C.WHITE} Help"
         )
 
         print(
-            f"{C.BRIGHT_RED}[5]{C.WHITE} Exit LIGHT SCRIPT"
+            f"{C.BRIGHT_YELLOW}  [3]{C.WHITE} Clear Memory"
+        )
+
+        print(
+            f"{C.BRIGHT_BLUE}  [4]{C.WHITE} Debug Memory"
+        )
+
+        print(
+            f"{C.BRIGHT_RED}  [5]{C.WHITE} Exit LIGHT SCRIPT"
         )
 
         print()
@@ -5532,8 +4099,8 @@ def script_menu():
         # =============================================
 
         elif choice == "2":
-           print("HELP OPEN")
-           script_help()
+
+            script_help()
 
         # =============================================
         # CLEAR
@@ -5541,7 +4108,10 @@ def script_menu():
 
         elif choice == "3":
 
-            clear_script_memory()
+            SCRIPT_VARIABLES.clear()
+            SCRIPT_DISPLAYS.clear()
+            SCRIPT_FUNCTIONS.clear()
+            ACTIVE_INTERVALS.clear()
 
             print()
 
@@ -5557,7 +4127,80 @@ def script_menu():
 
         elif choice == "4":
 
-            debug_script_memory()
+            print()
+
+            print(
+                f"{C.BRIGHT_MAGENTA}"
+                "╔════════════════════════════════════════════════╗"
+            )
+
+            print(
+                f"{C.BRIGHT_MAGENTA}"
+                "║           SCRIPT MEMORY STATE                ║"
+                f"{C.RESET}"
+            )
+
+            print(
+                f"{C.BRIGHT_MAGENTA}"
+                "╚════════════════════════════════════════════════╝"
+                f"{C.RESET}"
+            )
+
+            print()
+
+            # =============================================
+            # VARIABLES
+            # =============================================
+
+            print(
+                f"{C.BRIGHT_GREEN}[ VARIABLES ]{C.RESET}"
+            )
+
+            if SCRIPT_VARIABLES:
+
+                for key, value in SCRIPT_VARIABLES.items():
+
+                    print(
+                        f"{C.BRIGHT_CYAN}"
+                        f"  {key}"
+                        f"{C.BRIGHT_BLACK} = "
+                        f"{C.BRIGHT_YELLOW}{repr(value)}"
+                        f"{C.RESET}"
+                    )
+
+            else:
+
+                print(
+                    f"{C.BRIGHT_BLACK}  [ EMPTY ]{C.RESET}"
+                )
+
+            print()
+
+            # =============================================
+            # FUNCTIONS
+            # =============================================
+
+            print(
+                f"{C.BRIGHT_CYAN}[ FUNCTIONS ]{C.RESET}"
+            )
+
+            if SCRIPT_FUNCTIONS:
+
+                for key in SCRIPT_FUNCTIONS.keys():
+
+                    print(
+                        f"{C.BRIGHT_WHITE}"
+                        f"  {key}()"
+                        f"{C.RESET}"
+                    )
+
+            else:
+
+                print(
+                    f"{C.BRIGHT_BLACK}  [ EMPTY ]{C.RESET}"
+                )
+
+            print()
 
         # =============================================
         # EXIT
@@ -5652,12 +4295,9 @@ def process_script_engine():
                 "P16"
             )
         )
-# =========================================================
-# MAIN MENU
-# =========================================================
 
 # =========================================================
-# CLEAR SCREEN
+# MAIN MENU - BEAUTIFUL UI VERSION
 # =========================================================
 
 import os
@@ -5667,19 +4307,19 @@ def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
 
 # =========================================================
-# BOX UI
+# FANCY BOX UI
 # =========================================================
 
-def ui_box(title, subtitle=""):
+def ui_fancy_box(title, subtitle=""):
 
     print(
         f"{C.BRIGHT_MAGENTA}"
-        "╔══════════════════════════════════════════════╗"
+        "╔════════════════════════════════════════════════╗"
     )
 
     print(
         "║"
-        f"{title:^46}"
+        f" {title:^44} "
         "║"
     )
 
@@ -5687,30 +4327,29 @@ def ui_box(title, subtitle=""):
 
         print(
             "║"
-            f"{subtitle:^46}"
+            f" {subtitle:^44} "
             "║"
         )
 
     print(
-        "╚══════════════════════════════════════════════╝"
+        "╚════════════════════════════════════════════════╝"
         f"{C.RESET}"
     )
 
 # =========================================================
-# MENU LINE
+# FANCY MENU ITEM
 # =========================================================
 
-def ui_menu_line(index, text, color):
+def ui_fancy_menu(index, text, color):
 
     print(
         f"{color}"
-        f" [{index}] "
-        f"{text}"
+        f"  ▸ [{index}] {text}"
         f"{C.RESET}"
     )
 
 # =========================================================
-# MAIN MENU
+# MAIN MENU - FINAL VERSION
 # =========================================================
 
 def main():
@@ -5721,7 +4360,7 @@ def main():
 
         print()
 
-        ui_box(
+        ui_fancy_box(
             "CIPHER-X",
             "ENCRYPTION PROTOCOL v1.10"
         )
@@ -5730,31 +4369,42 @@ def main():
 
         print(
             f"{C.BRIGHT_BLACK}"
-            "  Select Function"
+            "  ═══════════════════════════════════════════"
+            f"{C.RESET}"
+        )
+
+        print(
+            f"{C.BRIGHT_MAGENTA}  Select Function"
+            f"{C.RESET}"
+        )
+
+        print(
+            f"{C.BRIGHT_BLACK}"
+            "  ═══════════════════════════════════════════"
             f"{C.RESET}"
         )
 
         print()
 
-        ui_menu_line(
+        ui_fancy_menu(
             "1",
             "ENCRYPT TEXT",
             C.BRIGHT_CYAN
         )
 
-        ui_menu_line(
+        ui_fancy_menu(
             "2",
             "DECRYPT TEXT",
             C.BRIGHT_GREEN
         )
 
-        ui_menu_line(
+        ui_fancy_menu(
             "3",
             "LIGHT SCRIPT",
             C.BRIGHT_YELLOW
         )
 
-        ui_menu_line(
+        ui_fancy_menu(
             "4",
             "EXIT",
             C.BRIGHT_RED
@@ -5766,7 +4416,7 @@ def main():
 
             choice = input(
                 f"{C.BRIGHT_MAGENTA}"
-                " SYSTEM > "
+                "  ➜ SYSTEM > "
                 f"{C.RESET}"
             ).strip()
 
@@ -5797,16 +4447,16 @@ def main():
 
             print()
 
-            ui_box(
+            ui_fancy_box(
                 "ENCRYPT MODE",
-                "INPUT -> CIPHER"
+                "INPUT → CIPHER"
             )
 
             print()
 
             text = input(
                 f"{C.BRIGHT_CYAN}"
-                " TEXT > "
+                "  ➜ TEXT > "
                 f"{C.RESET}"
             )
 
@@ -5818,15 +4468,15 @@ def main():
 
                 print(
                     f"{C.BRIGHT_CYAN}"
-                    "╔══════════════════════════════════════════════╗"
+                    "╔════════════════════════════════════════════════╗"
                 )
 
                 print(
-                    "║               ENCRYPT RESULT                ║"
+                    "║            ENCRYPT RESULT                    ║"
                 )
 
                 print(
-                    "╚══════════════════════════════════════════════╝"
+                    "╚════════════════════════════════════════════════╝"
                     f"{C.RESET}"
                 )
 
@@ -5834,7 +4484,7 @@ def main():
 
                 print(
                     f"{C.BRIGHT_WHITE}"
-                    f"{result}"
+                    f"  {result}"
                     f"{C.RESET}"
                 )
 
@@ -5852,7 +4502,7 @@ def main():
 
             input(
                 f"{C.BRIGHT_BLACK}"
-                " ENTER TO RETURN..."
+                "  Press ENTER to return..."
                 f"{C.RESET}"
             )
 
@@ -5866,16 +4516,24 @@ def main():
 
             print()
 
-            ui_box(
+            ui_fancy_box(
                 "DECRYPT MODE",
-                "CIPHER -> TEXT"
+                "CIPHER → TEXT"
+            )
+
+            print()
+
+            print(
+                f"{C.BRIGHT_BLACK}"
+                "  Format: 5 chars per space (XXXXX XXXXX ...)"
+                f"{C.RESET}"
             )
 
             print()
 
             text = input(
                 f"{C.BRIGHT_GREEN}"
-                " CIPHER > "
+                "  ➜ CIPHER > "
                 f"{C.RESET}"
             )
 
@@ -5887,15 +4545,15 @@ def main():
 
                 print(
                     f"{C.BRIGHT_GREEN}"
-                    "╔══════════════════════════════════════════════╗"
+                    "╔════════════════════════════════════════════════╗"
                 )
 
                 print(
-                    "║               DECRYPT RESULT                ║"
+                    "║            DECRYPT RESULT                    ║"
                 )
 
                 print(
-                    "╚══════════════════════════════════════════════╝"
+                    "╚════════════════════════════════════════════════╝"
                     f"{C.RESET}"
                 )
 
@@ -5903,7 +4561,7 @@ def main():
 
                 print(
                     f"{C.BRIGHT_WHITE}"
-                    f"{result}"
+                    f"  {result}"
                     f"{C.RESET}"
                 )
 
@@ -5921,7 +4579,7 @@ def main():
 
             input(
                 f"{C.BRIGHT_BLACK}"
-                " ENTER TO RETURN..."
+                "  Press ENTER to return..."
                 f"{C.RESET}"
             )
 
@@ -5943,7 +4601,7 @@ def main():
 
             print()
 
-            ui_box(
+            ui_fancy_box(
                 "SYSTEM CLOSED"
             )
 
@@ -5968,28 +4626,7 @@ def main():
             )
 
             time.sleep(1)
-# =========================================================
-# ENGINE STATE RECOVERY
-# =========================================================
 
-ENGINE_STATE = {
-
-    "boot_time": time.time(),
-
-    "executed_commands": 0,
-    "scripts_executed": 0,
-
-    "runtime_errors": 0,
-
-    "last_error": None,
-}
-# =========================================================
-# LEGACY COMMAND SPLITTER
-# =========================================================
-
-def split_commands(script):
-
-    return split_script_commands(script)
 # =========================================================
 # ENTRY POINT
 # =========================================================
@@ -6021,7 +4658,7 @@ if __name__ == "__main__":
         print(
             script_error(
                 "FATAL_SYSTEM_ERROR",
-                format_traceback(e),
+                str(e),
                 "P17"
             )
         )
