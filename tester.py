@@ -51,6 +51,306 @@ class C:
     BOLD = "\033[1m"
 
 # =========================================================
+# UI WIDTH
+# =========================================================
+
+UI_WIDTH = 56
+
+# =========================================================
+# CENTER
+# =========================================================
+
+def ui_center(text):
+
+    text = str(text)
+
+    return text.center(UI_WIDTH)
+
+# =========================================================
+# LINE
+# =========================================================
+
+def ui_line(color=C.BRIGHT_MAGENTA):
+
+    print(
+        f"{color}"
+        + "═" * UI_WIDTH
+        + f"{C.RESET}"
+    )
+
+# =========================================================
+# BOX TITLE
+# =========================================================
+
+def ui_title(title):
+
+    print()
+
+    ui_line(C.BRIGHT_MAGENTA)
+
+    print(
+        f"{C.BRIGHT_WHITE}"
+        f"{ui_center(title)}"
+        f"{C.RESET}"
+    )
+
+    ui_line(C.BRIGHT_MAGENTA)
+
+# =========================================================
+# BOX MESSAGE
+# =========================================================
+
+def ui_message(message, color=C.BRIGHT_WHITE):
+
+    print(
+        f"{color}"
+        f"{ui_center(message)}"
+        f"{C.RESET}"
+    )
+
+# =========================================================
+# STATUS
+# =========================================================
+
+def ui_status(label, value, color=C.BRIGHT_CYAN):
+
+    left = f" {label} "
+
+    dots = "." * max(1, UI_WIDTH - len(left) - len(str(value)) - 2)
+
+    print(
+        f"{C.BRIGHT_BLACK}"
+        f"{left}{dots} "
+        f"{color}{value}"
+        f"{C.RESET}"
+    )
+
+# =========================================================
+# MENU ITEM
+# =========================================================
+
+def ui_menu(index, text, color=C.BRIGHT_GREEN):
+
+    line = f" [{index}] {text}"
+
+    print(
+        f"{color}"
+        f"{line}"
+        f"{C.RESET}"
+    )
+
+# =========================================================
+# INPUT BAR
+# =========================================================
+
+def ui_input(label="INPUT"):
+
+    return input(
+        f"{C.BRIGHT_MAGENTA}"
+        f"┌─[{label}]\n"
+        f"└──> "
+        f"{C.RESET}"
+    )
+
+# =========================================================
+# SPLASH SCREEN
+# =========================================================
+
+def splash_screen():
+
+    print()
+
+    print(
+        f"{C.BRIGHT_MAGENTA}"
+        "██████╗██╗██████╗ ██╗  ██╗███████╗██████╗ "
+    )
+
+    print(
+        "██╔════╝██║██╔══██╗██║  ██║██╔════╝██╔══██╗"
+    )
+
+    print(
+        "██║     ██║██████╔╝███████║█████╗  ██████╔╝"
+    )
+
+    print(
+        "██║     ██║██╔═══╝ ██╔══██║██╔══╝  ██╔══██╗"
+    )
+
+    print(
+        "╚██████╗██║██║     ██║  ██║███████╗██║  ██║"
+    )
+
+    print(
+        " ╚═════╝╚═╝╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝"
+        f"{C.RESET}"
+    )
+
+    print()
+
+    ui_message(
+        "CIPHER-X ENCRYPTION SYSTEM",
+        C.BRIGHT_CYAN
+    )
+
+    ui_message(
+        "LIGHT SCRIPT ENGINE",
+        C.BRIGHT_YELLOW
+    )
+
+    print()
+
+# =========================================================
+# BETTER MAIN MENU
+# =========================================================
+
+def main():
+
+    while True:
+
+        splash_screen()
+
+        ui_title("MAIN MENU")
+
+        ui_menu(1, "LIGHT SCRIPT", C.BRIGHT_GREEN)
+        ui_menu(2, "ENCRYPT TEXT", C.BRIGHT_CYAN)
+        ui_menu(3, "DECRYPT TEXT", C.BRIGHT_YELLOW)
+        ui_menu(4, "EXIT", C.BRIGHT_RED)
+
+        print()
+
+        try:
+
+            choice = ui_input("SYSTEM").strip()
+
+        except KeyboardInterrupt:
+
+            print()
+            break
+
+        except EOFError:
+
+            print(
+                script_error(
+                    "MAIN_INPUT_ERROR",
+                    "Input stream closed.",
+                    "SYS01"
+                )
+            )
+
+            break
+
+        # =====================================================
+        # LIGHT SCRIPT
+        # =====================================================
+
+        if choice == "1":
+
+            process_script_engine()
+
+        # =====================================================
+        # ENCRYPT
+        # =====================================================
+
+        elif choice == "2":
+
+            print()
+
+            ui_title("ENCRYPT")
+
+            text = ui_input("TEXT")
+
+            try:
+
+                result = encrypt(text)
+
+                print()
+
+                ui_line(C.BRIGHT_CYAN)
+
+                print(
+                    f"{C.BRIGHT_CYAN}"
+                    f"{result}"
+                    f"{C.RESET}"
+                )
+
+                ui_line(C.BRIGHT_CYAN)
+
+            except Exception as e:
+
+                print(
+                    script_error(
+                        "ENCRYPTION_FAILURE",
+                        str(e),
+                        "ENCX"
+                    )
+                )
+
+        # =====================================================
+        # DECRYPT
+        # =====================================================
+
+        elif choice == "3":
+
+            print()
+
+            ui_title("DECRYPT")
+
+            text = ui_input("CIPHER")
+
+            try:
+
+                result = decrypt(text)
+
+                print()
+
+                ui_line(C.BRIGHT_GREEN)
+
+                print(
+                    f"{C.BRIGHT_GREEN}"
+                    f"{result}"
+                    f"{C.RESET}"
+                )
+
+                ui_line(C.BRIGHT_GREEN)
+
+            except Exception as e:
+
+                print(
+                    script_error(
+                        "DECRYPTION_FAILURE",
+                        str(e),
+                        "DECX"
+                    )
+                )
+
+        # =====================================================
+        # EXIT
+        # =====================================================
+
+        elif choice == "4":
+
+            print()
+
+            ui_title("SYSTEM CLOSED")
+
+            break
+
+        # =====================================================
+        # INVALID
+        # =====================================================
+
+        else:
+
+            print(
+                script_error(
+                    "INVALID_MAIN_MENU",
+                    "Unknown menu index.",
+                    "SYS02"
+                )
+            )
+
+# =========================================================
 # SLOW PRINT
 # =========================================================
 
@@ -272,7 +572,7 @@ DAN_MAP = {
 
 SPECIAL_ENC = {
 
-    '\n': r'\\0140',
+    '\n': r'\0140',
 
     'ん': '01140',
     'ン': '02140',
@@ -4905,18 +5205,108 @@ def process_script_engine():
 # MAIN MENU
 # =========================================================
 
+# =========================================================
+# CLEAR SCREEN
+# =========================================================
+
+import os
+
+def clear_screen():
+
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+# =========================================================
+# BOX UI
+# =========================================================
+
+def ui_box(title, subtitle=""):
+
+    print(
+        f"{C.BRIGHT_MAGENTA}"
+        "╔══════════════════════════════════════════════╗"
+    )
+
+    print(
+        "║"
+        f"{title:^46}"
+        "║"
+    )
+
+    if subtitle != "":
+
+        print(
+            "║"
+            f"{subtitle:^46}"
+            "║"
+        )
+
+    print(
+        "╚══════════════════════════════════════════════╝"
+        f"{C.RESET}"
+    )
+
+# =========================================================
+# MENU LINE
+# =========================================================
+
+def ui_menu_line(index, text, color):
+
+    print(
+        f"{color}"
+        f" [{index}] "
+        f"{text}"
+        f"{C.RESET}"
+    )
+
+# =========================================================
+# MAIN MENU
+# =========================================================
+
 def main():
 
     while True:
 
+        clear_screen()
+
+        print()
+
+        ui_box(
+            "CIPHER-X",
+            "ENCRYPTION PROTOCOL v1.10"
+        )
+
         print()
 
         print(
-            f"{C.BRIGHT_GREEN}[1]{C.WHITE} LIGHT SCRIPT"
+            f"{C.BRIGHT_BLACK}"
+            "  Select Function"
+            f"{C.RESET}"
         )
 
-        print(
-            f"{C.BRIGHT_RED}[2]{C.WHITE} EXIT"
+        print()
+
+        ui_menu_line(
+            "1",
+            "ENCRYPT TEXT",
+            C.BRIGHT_CYAN
+        )
+
+        ui_menu_line(
+            "2",
+            "DECRYPT TEXT",
+            C.BRIGHT_GREEN
+        )
+
+        ui_menu_line(
+            "3",
+            "LIGHT SCRIPT",
+            C.BRIGHT_YELLOW
+        )
+
+        ui_menu_line(
+            "4",
+            "EXIT",
+            C.BRIGHT_RED
         )
 
         print()
@@ -4924,7 +5314,9 @@ def main():
         try:
 
             choice = input(
-                f"{C.BRIGHT_MAGENTA}SYSTEM >> {C.RESET}"
+                f"{C.BRIGHT_MAGENTA}"
+                " SYSTEM > "
+                f"{C.RESET}"
             ).strip()
 
         except KeyboardInterrupt:
@@ -4944,35 +5336,177 @@ def main():
 
             break
 
-        # =============================================
-        # LIGHT SCRIPT
-        # =============================================
+        # =====================================================
+        # ENCRYPT
+        # =====================================================
 
         if choice == "1":
 
-            process_script_engine()
-
-        # =============================================
-        # EXIT
-        # =============================================
-
-        elif choice == "2":
+            clear_screen()
 
             print()
 
-            slow_print(
-                "[ SYSTEM CLOSED ]",
-                0.005,
-                C.BRIGHT_RED
+            ui_box(
+                "ENCRYPT MODE",
+                "INPUT -> CIPHER"
             )
+
+            print()
+
+            text = input(
+                f"{C.BRIGHT_CYAN}"
+                " TEXT > "
+                f"{C.RESET}"
+            )
+
+            print()
+
+            try:
+
+                result = encrypt(text)
+
+                print(
+                    f"{C.BRIGHT_CYAN}"
+                    "╔══════════════════════════════════════════════╗"
+                )
+
+                print(
+                    "║               ENCRYPT RESULT                ║"
+                )
+
+                print(
+                    "╚══════════════════════════════════════════════╝"
+                    f"{C.RESET}"
+                )
+
+                print()
+
+                print(
+                    f"{C.BRIGHT_WHITE}"
+                    f"{result}"
+                    f"{C.RESET}"
+                )
+
+            except Exception as e:
+
+                print(
+                    script_error(
+                        "ENCRYPTION_FAILURE",
+                        str(e),
+                        "ENCX"
+                    )
+                )
+
+            print()
+
+            input(
+                f"{C.BRIGHT_BLACK}"
+                " ENTER TO RETURN..."
+                f"{C.RESET}"
+            )
+
+        # =====================================================
+        # DECRYPT
+        # =====================================================
+
+        elif choice == "2":
+
+            clear_screen()
+
+            print()
+
+            ui_box(
+                "DECRYPT MODE",
+                "CIPHER -> TEXT"
+            )
+
+            print()
+
+            text = input(
+                f"{C.BRIGHT_GREEN}"
+                " CIPHER > "
+                f"{C.RESET}"
+            )
+
+            print()
+
+            try:
+
+                result = decrypt(text)
+
+                print(
+                    f"{C.BRIGHT_GREEN}"
+                    "╔══════════════════════════════════════════════╗"
+                )
+
+                print(
+                    "║               DECRYPT RESULT                ║"
+                )
+
+                print(
+                    "╚══════════════════════════════════════════════╝"
+                    f"{C.RESET}"
+                )
+
+                print()
+
+                print(
+                    f"{C.BRIGHT_WHITE}"
+                    f"{result}"
+                    f"{C.RESET}"
+                )
+
+            except Exception as e:
+
+                print(
+                    script_error(
+                        "DECRYPTION_FAILURE",
+                        str(e),
+                        "DECX"
+                    )
+                )
+
+            print()
+
+            input(
+                f"{C.BRIGHT_BLACK}"
+                " ENTER TO RETURN..."
+                f"{C.RESET}"
+            )
+
+        # =====================================================
+        # LIGHT SCRIPT
+        # =====================================================
+
+        elif choice == "3":
+
+            process_script_engine()
+
+        # =====================================================
+        # EXIT
+        # =====================================================
+
+        elif choice == "4":
+
+            clear_screen()
+
+            print()
+
+            ui_box(
+                "SYSTEM CLOSED"
+            )
+
+            print()
 
             break
 
-        # =============================================
+        # =====================================================
         # INVALID
-        # =============================================
+        # =====================================================
 
         else:
+
+            print()
 
             print(
                 script_error(
@@ -4981,6 +5515,9 @@ def main():
                     "SYS02"
                 )
             )
+
+            time.sleep(1)
+
 # =========================================================
 # ENTRY POINT
 # =========================================================
@@ -5016,5 +5553,3 @@ if __name__ == "__main__":
                 "P17"
             )
         )
-    
-    
