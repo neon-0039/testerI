@@ -659,7 +659,7 @@ def script_banner():
 
     print("╔══════════════════════════════════════════════╗")
     print("║         CIPHER-X  Light Script               ║")
-    print("║               PROTOCOL v1.0                  ║")
+    print("║               PROTOCOL v1.10                 ║")
     print("╚══════════════════════════════════════════════╝")
 
     print(C.RESET)
@@ -4901,7 +4901,86 @@ def process_script_engine():
                 "P16"
             )
         )
+# =========================================================
+# MAIN MENU
+# =========================================================
 
+def main():
+
+    while True:
+
+        print()
+
+        print(
+            f"{C.BRIGHT_GREEN}[1]{C.WHITE} LIGHT SCRIPT"
+        )
+
+        print(
+            f"{C.BRIGHT_RED}[2]{C.WHITE} EXIT"
+        )
+
+        print()
+
+        try:
+
+            choice = input(
+                f"{C.BRIGHT_MAGENTA}SYSTEM >> {C.RESET}"
+            ).strip()
+
+        except KeyboardInterrupt:
+
+            print()
+            break
+
+        except EOFError:
+
+            print(
+                script_error(
+                    "MAIN_INPUT_ERROR",
+                    "Input stream closed.",
+                    "SYS01"
+                )
+            )
+
+            break
+
+        # =============================================
+        # LIGHT SCRIPT
+        # =============================================
+
+        if choice == "1":
+
+            process_script_engine()
+
+        # =============================================
+        # EXIT
+        # =============================================
+
+        elif choice == "2":
+
+            print()
+
+            slow_print(
+                "[ SYSTEM CLOSED ]",
+                0.005,
+                C.BRIGHT_RED
+            )
+
+            break
+
+        # =============================================
+        # INVALID
+        # =============================================
+
+        else:
+
+            print(
+                script_error(
+                    "INVALID_MAIN_MENU",
+                    "Unknown menu index.",
+                    "SYS02"
+                )
+            )
 # =========================================================
 # ENTRY POINT
 # =========================================================
@@ -4938,127 +5017,4 @@ if __name__ == "__main__":
             )
         )
     
-    if command == "memory()":
-
-        cmd_memory(command)
-        return
-
-    # =============================================
-    # reset()
-    # =============================================
-
-    if command == "reset()":
-
-        cmd_reset(command)
-        return
-
     
-    if command == "help()":
-
-        cmd_help(command)
-        return
-
-    # =============================================
-    # clear()
-    # =============================================
-
-    if command == "clear()":
-
-        cmd_clear(command)
-        return
-
-    # =============================================
-    # exit()
-    # =============================================
-
-    if command == "exit()":
-
-        cmd_exit(command)
-        return
-
-    # =============================================
-    # push()
-    # =============================================
-
-    if command.startswith("push("):
-
-        cmd_push(command)
-        return
-
-    # =============================================
-    # remove()
-    # =============================================
-
-    if command.startswith("remove("):
-
-        cmd_remove(command)
-        return
-
-    # =============================================
-    # length()
-    # =============================================
-
-    if command.startswith("length("):
-
-        cmd_length(command)
-        return
-
-    # =============================================
-    # try-catch
-    # =============================================
-
-    if command.startswith("try"):
-
-        cmd_try(command)
-        return
-
-    # =============================================
-    # throw()
-    # =============================================
-
-    if command.startswith("throw("):
-
-        cmd_throw(command)
-        return
-
-    # =============================================
-    # assert()
-    # =============================================
-
-    if command.startswith("assert("):
-
-        cmd_assert(command)
-        return
-
-    # =============================================
-    # type()
-    # =============================================
-
-    if command.startswith("type("):
-
-        cmd_type(command)
-        return
-
-    # =============================================
-    # exists()
-    # =============================================
-
-    if command.startswith("exists("):
-
-        cmd_exists(command)
-        return
-
-    # =============================================
-    # trace()
-    # =============================================
-
-    if command == "trace()":
-
-        cmd_trace(command)
-        return
-
-    # =============================================
-    # FALLBACK
-    # =============================================
-
-    OLD_EXECUTE_COMMAND(command)
