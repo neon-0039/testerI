@@ -23,6 +23,21 @@ SCRIPT_VARIABLES = {}
 SCRIPT_DISPLAYS = {}
 SCRIPT_FUNCTIONS = {}
 # =========================================================
+# ENGINE STATE
+# =========================================================
+
+ENGINE_STATE = {
+
+    "boot_time": time.time(),
+
+    "executed_commands": 0,
+    "scripts_executed": 0,
+
+    "runtime_errors": 0,
+
+    "last_error": None,
+}
+# =========================================================
 # COLOR SYSTEM
 # =========================================================
 
