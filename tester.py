@@ -1,9 +1,4 @@
 # =========================================================
-# CIPHER-X SCRIPT ENGINE
-# PART 1 / 6
-# SAFE CORE PATCH
-# =========================================================
-# =========================================================
 # IMPORTS
 # =========================================================
 
@@ -199,7 +194,7 @@ def splash_screen():
     )
 
     ui_message(
-        "LIGHT SCRIPT ENGINE",
+        "Nano Act Script ENGINE",
         C.BRIGHT_YELLOW
     )
 
@@ -706,7 +701,7 @@ def script_banner():
     print(f"{C.BRIGHT_MAGENTA}{C.BOLD}")
 
     print("╔══════════════════════════════════════════════╗")
-    print("║         CIPHER-X  Light Script               ║")
+    print("║         CIPHER-X and Nano Act Script         ║")
     print("║               PROTOCOL v1.10                 ║")
     print("╚══════════════════════════════════════════════╝")
 
@@ -4000,7 +3995,7 @@ wait(1)
 
 exit()
 ------------------------------------------------------------
-Shutdown Light Script.
+Shutdown Nano Act Script.
 
 ============================================================
 """
@@ -4127,7 +4122,7 @@ def script_console():
 
         print(
             f"{C.BRIGHT_MAGENTA}"
-            "║          LIGHT SCRIPT CONSOLE                ║"
+            "║          Nano Act Script CONSOLE                ║"
             f"{C.RESET}"
         )
 
@@ -4162,7 +4157,7 @@ def script_console():
             print()
 
             slow_print(
-                "[ LIGHT SCRIPT INTERRUPTED ]",
+                "[ Nano Act Script INTERRUPTED ]",
                 0.005,
                 C.BRIGHT_RED
             )
@@ -4188,7 +4183,7 @@ def script_console():
             print()
 
             slow_print(
-                "[ LIGHT SCRIPT CLOSED ]",
+                "[ Nano Act Script CLOSED ]",
                 0.005,
                 C.BRIGHT_RED
             )
@@ -4243,7 +4238,7 @@ def script_menu():
 
         print(
             f"{C.BRIGHT_MAGENTA}"
-            "║          LIGHT SCRIPT MENU                   ║"
+            "║          Nano Act Script                   ║"
             f"{C.RESET}"
         )
 
@@ -4272,7 +4267,7 @@ def script_menu():
         )
 
         print(
-            f"{C.BRIGHT_RED}  [5]{C.WHITE} Exit LIGHT SCRIPT"
+            f"{C.BRIGHT_RED}  [5]{C.WHITE} Exit Nano Act Script"
         )
 
         print()
@@ -4407,7 +4402,7 @@ def script_menu():
             print()
 
             slow_print(
-                "[ EXITING LIGHT SCRIPT ]",
+                "[ EXITING Nano Act Script ]",
                 0.005,
                 C.BRIGHT_RED
             )
@@ -4440,21 +4435,21 @@ def process_script_engine():
 
         print(
             f"{C.BRIGHT_MAGENTA}"
-            "[ LIGHT SCRIPT ]"
+            "[ Nano Act Script ]"
             f"{C.RESET}"
         )
 
     try:
 
         slow_print(
-            "[ LIGHT SCRIPT ONLINE ]",
+            "[ Nano Act Script ONLINE ]",
             0.005,
             C.BRIGHT_MAGENTA
         )
 
     except Exception:
 
-        print("[ LIGHT SCRIPT ONLINE ]")
+        print("[ Nano Act Script ONLINE ]")
 
     try:
 
@@ -4465,7 +4460,7 @@ def process_script_engine():
         print()
 
         slow_print(
-            "[ LIGHT SCRIPT INTERRUPTED ]",
+            "[ Nano Act Script INTERRUPTED ]",
             0.005,
             C.BRIGHT_RED
         )
@@ -4566,7 +4561,7 @@ def main():
 
         ui_fancy_menu(
             "3",
-            "LIGHT SCRIPT",
+            "Nano Act Script",
             C.BRIGHT_YELLOW
         )
 
