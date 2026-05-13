@@ -1177,10 +1177,14 @@ def cmd_func(command):
         f"{C.RESET}"
     )
 
-def cmd_gage(command):
+FUNC_RETURN_VALUE = None
+
+def cmd_func_run(command):
+
+    global FUNC_RETURN_VALUE
 
     match = re.fullmatch(
-        r'gage\((.+?)\)',
+        r'([A-Za-z_][A-Za-z0-9_]*)\.run\((.*?)\)',
         command
     )
 
@@ -1188,19 +1192,110 @@ def cmd_gage(command):
 
         print(
             script_error(
-                "INVALID_GAGE_SYNTAX",
-                "Invalid gage() syntax.",
-                "G01"
+                "INVALID_FUNCTION_RUN",
+                "Invalid function execution syntax.",
+                "S11"
             )
         )
         return
 
     name = match.group(1).strip()
 
-    SCRIPT_GAGES[name] = [0] * 10
+    if name not in SCRIPT_FUNCTIONS:
 
-    print_gage(name)
+        print(
+            script_error(
+                "FUNCTION_NOT_FOUND",
+                f"Function '{name}' does not exist.",
+                "S12"
+            )
+        )
+        return
 
+    body = SCRIPT_FUNCTIONS.get(name)
+
+    if not body:
+
+        print(
+            script_error(
+                "EMPTY_FUNCTION_BODY",
+                f"Function '{name}' is empty.",
+                "S12A"
+            )
+        )
+        return
+
+    FUNC_RETURN_VALUE = None
+
+    try:
+
+        execute_script(body)
+
+    except Exception as e:
+
+        print(
+            script_error(
+                "FUNCTION_RUNTIME_ERROR",
+                str(e),
+                "S12B"
+            )
+        )
+
+class FunctionReturn(Exception):
+    def __init__(self, value):
+        self.value = value
+        super().__init__()
+
+def cmd_func_return(command):
+
+    match = re.fullmatch(
+        r'>>\s*(.+)',
+        command
+    )
+
+    if not match:
+
+        print(
+            script_error(
+                "INVALID_RETURN_SYNTAX",
+                "Invalid >> syntax.",
+                "S12C"
+            )
+        )
+        return
+
+    raw = match.group(1).strip()
+
+    value = parse_value(raw)
+
+    raise FunctionReturn(value)
+
+def execute_script(script):
+
+    script = str(script).strip()
+
+    if script == "":
+        return
+
+    commands = split_cipher_commands(script)
+
+    for command in commands:
+
+        command = str(command).strip()
+
+        if command == "":
+            continue
+
+        try:
+
+            execute_command(command)
+
+        except FunctionReturn as e:
+
+            global FUNC_RETURN_VALUE
+            FUNC_RETURN_VALUE = e.value
+            raise
+            
 def print_gage(name):
 
     if name not in SCRIPT_GAGES:
@@ -2386,6 +2481,11 @@ def execute_command(command):
     command = str(command).strip()
 
     if command == "":
+        return
+
+    if command.startswith(">>"):
+
+        cmd_func_return(command)
         return
 
     if command.startswith("inli("):
