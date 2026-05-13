@@ -3564,9 +3564,7 @@ FUNCTION SYSTEM
 
 func name(){...}
 ------------------------------------------------------------
-Create a reusable function block.
-
-Functions can contain multiple commands.
+Create a reusable function.
 
 Example:
 func heal(){
@@ -3581,6 +3579,23 @@ Execute a function.
 
 Example:
 heal.run()
+
+------------------------------------------------------------
+
+>> value
+------------------------------------------------------------
+Return value from function.
+
+The return value is stored in FUNC_RETURN_VALUE.
+
+Example:
+func getValue(){
+    int(x,100)
+    >> x
+}
+
+getValue.run()
+on(FUNC_RETURN_VALUE)
 
 ============================================================
 """
